@@ -1,0 +1,23 @@
+{
+    "id": "flecs.systems.sokol",
+    "type": "package",
+    "value": {
+        "author": "Sander Mertens",
+        "description": "Flecs module package",
+        "use": [
+            "flecs",
+            "flecs.components.gui",
+            "flecs.components.transform",
+            "flecs.components.geometry",
+            "flecs.systems.transform",
+            "flecs.systems.sdl2",
+            "bake.opengl",
+            "bake.sdl2"
+        ]
+    },
+    "lang.c": {
+        "${os linux}": {
+            "lib": ["m"]
+        }
+    } 
+}

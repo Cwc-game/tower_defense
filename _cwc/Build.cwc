@@ -1,0 +1,64 @@
+>
+-{pObj}:=obj/cpp_{_sPlatform}_{_sOpt}/
+>
+-{pOut}:=_out/cpp_{_sPlatform}_{_sOpt}/
+>
+-{vFlag}=
+-DUNICODE
+-Dflecs_systems_sokol_STATIC
+>
+-{pLib}=../lib/
+-{pSokol}={pLib}Sokol/
+-{pFlecs}={pLib}flecs/
+-{pFlecs_comp_graphics}={pLib}flecs-components-graphics/
+-{flecs-components-input}={pLib}flecs-components-input/
+-{flecs-components-physics}={pLib}flecs-components-physics/
+-{flecs-sys-physics}={pLib}flecs-systems-physics/
+-{pFlecs_comp_transform}={pLib}flecs-components-transform/
+-{pFlecs_sys_transform}={pLib}flecs-systems-transform/
+-{pFlecs_sys_sokol}={pLib}flecs-systems-sokol/
+-{pFlecs_comp_gui}={pLib}flecs-components-gui/
+-{pFlecs_comp_geometry}={pLib}flecs-components-geometry/
+-{pFlecs_meta}={pLib}flecs-meta/
+-{pFlecs_sdl2}={pLib}flecs-systems-sdl2/
+-{pCglm}={pLib}cglm/
+-{pGlew}={pLib}glew/
+-{pSrc}=../src/
+>
+-{vIncl}=
+-I {pSokol}
+-I {pFlecs}include/
+-I {pFlecs_comp_transform}include/
+-I {pFlecs_sys_transform}include/
+-I {pFlecs_sys_sokol}include/
+-I {pFlecs_comp_gui}include/
+-I {pFlecs_comp_geometry}include/
+-I {pFlecs_sdl2}include/
+-I {pFlecs_comp_graphics}include/
+-I {flecs-components-input}include/
+-I {flecs-components-physics}include/
+-I {flecs-sys-physics}include/
+-I {pFlecs_meta}include/
+-I {pCglm}include/cglm/
+-I {pGlew}include/
+-I {pLib}
+-I ../include/
+>
+;Build flecs
+-c {pFlecs}src/ -o {pObj}flecs/
+-{vIncl}
+-{vFlag}
+>
+;Build Src
+-c {pSrc} -o {pObj}src/
+-{vIncl}
+-{vFlag}
+>
+;Generate executable
+-o {pObj} -#To {pOut}/App.*
+-lws2_32
+-lopengl32
+-lgdi32
+-lwinmm
+>
+-#Run

@@ -1,0 +1,12 @@
+{
+    "id": "flecs.meta",
+    "type": "package",
+    "value": {
+        "author": "Sander Mertens",
+        "description": "Flecs module package",
+        "amalgamate": true,
+        "use": [
+            "flecs"
+        ]
+    }
+}
