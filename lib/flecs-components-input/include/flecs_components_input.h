@@ -5,7 +5,7 @@
 #include <flecs-components-input/bake_config.h>
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 #define ECS_KEY_UNKNOWN ((int)0)
@@ -125,7 +125,7 @@ void FlecsComponentsInputImport(
     ECS_IMPORT_COMPONENT(handles, EcsInput);\
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus

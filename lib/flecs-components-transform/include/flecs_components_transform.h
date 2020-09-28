@@ -4,7 +4,7 @@
 #include <flecs-components-transform/bake_config.h>
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 ECS_STRUCT(EcsPosition2, {
@@ -94,7 +94,7 @@ void FlecsComponentsTransformImport(
     ECS_IMPORT_COMPONENT(handles, EcsProject3);
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus

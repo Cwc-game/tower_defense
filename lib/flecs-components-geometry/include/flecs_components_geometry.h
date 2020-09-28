@@ -4,7 +4,7 @@
 #include <flecs-components-geometry/bake_config.h>
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 typedef struct EcsLine2 {
@@ -79,7 +79,7 @@ void FlecsComponentsGeometryImport(
     ECS_IMPORT_COMPONENT(handles, EcsLineWidth);
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus

@@ -4,7 +4,7 @@
 #include <flecs-components-graphics/bake_config.h>
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 typedef struct ecs_rgb_t {
@@ -66,7 +66,7 @@ void FlecsComponentsGraphicsImport(
     ECS_IMPORT_COMPONENT(handles, EcsEmissive);
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus

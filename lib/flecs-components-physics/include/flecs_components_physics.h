@@ -4,7 +4,7 @@
 #include <flecs-components-physics/bake_config.h>
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 ECS_STRUCT(EcsVelocity2, {
@@ -61,7 +61,7 @@ void FlecsComponentsPhysicsImport(
     ECS_IMPORT_COMPONENT(handles, EcsFriction);
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus

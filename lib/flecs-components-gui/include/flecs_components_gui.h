@@ -5,7 +5,7 @@
 #include "flecs-components-gui/bake_config.h"
 
 #ifdef __cplusplus
-extern "C" {
+//extern "C" {
 #endif
 
 ECS_STRUCT(EcsWindow, {
@@ -38,7 +38,7 @@ void FlecsComponentsGuiImport(
     ECS_IMPORT_COMPONENT(handles, EcsCanvas);
 
 #ifdef __cplusplus
-}
+//}
 #endif
 
 #ifdef __cplusplus
