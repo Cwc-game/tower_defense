@@ -144,8 +144,7 @@
                 "declare_2_world",
                 "declare_tag",
                 "declare_tag_w_entity",
-                "declare_entity",
-                "declare_type"
+                "declare_entity"
             ]
         }, {
             "id": "Hierarchies",
@@ -158,7 +157,6 @@
                 "tree_iter_empty",
                 "tree_iter_1_table",
                 "tree_iter_2_tables",
-                "tree_iter_w_filter",
                 "path_depth_0",
                 "path_depth_1",
                 "path_depth_2",
@@ -208,17 +206,7 @@
                 "add_path_existing_depth_0",
                 "add_path_existing_depth_1",
                 "add_path_existing_depth_2",                                
-                "new_w_child_in_root",
-                "delete_child",
-                "delete_2_children",
-                "delete_2_children_different_type",
-                "delete_tree_2_levels",
-                "delete_tree_3_levels",
-                "delete_tree_count_tables",
-                "delete_tree_staged",
-                "get_child_count",
-                "get_child_count_2_tables",
-                "get_child_count_no_children"
+                "new_w_child_in_root"
             ]
         }, {
             "id": "Add_bulk",
@@ -331,9 +319,7 @@
                 "delete_2nd_of_3",
                 "delete_2_of_3",
                 "delete_3_of_3",
-                "delete_w_on_remove",
-                "clear_1_component",
-                "clear_2_components"
+                "delete_w_on_remove"
             ]
         }, {
             "id": "Delete_w_filter",
@@ -385,10 +371,6 @@
                 "get_name_no_name",
                 "get_name_from_empty",
                 "lookup_by_id",
-                "lookup_symbol_by_id",
-                "lookup_name_w_digit",
-                "lookup_symbol_w_digit",
-                "lookup_path_w_digit",
                 "set_name_of_existing",
                 "change_name_of_existing"
             ]
@@ -461,11 +443,7 @@
                 "copy_on_override_trait",
                 "copy_on_override_trait_tag",
                 "copy_on_set_trait",
-                "copy_on_set_trait_tag",
-                "prevent_lifecycle_overwrite",
-                "prevent_lifecycle_overwrite_null_callbacks",
-                "allow_lifecycle_overwrite_equal_callbacks",
-                "set_lifecycle_after_trigger"
+                "copy_on_set_trait_tag"
             ]
         }, {
             "id": "Pipeline",
@@ -546,22 +524,7 @@
                 "two_named_columns_of_two",
                 "get_column_by_name",
                 "get_column_by_name_not_found",
-                "get_column_by_name_no_names",
-                "redeclare_system_same_expr",
-                "redeclare_system_null_expr",
-                "redeclare_system_0_expr",
-                "redeclare_system_different_expr",
-                "redeclare_system_null_and_expr",
-                "redeclare_system_expr_and_null",
-                "redeclare_system_expr_and_0",
-                "redeclare_system_0_and_expr",
-                "redeclare_system_0_and_null",
-                "redeclare_system_null_and_0",
-                "redeclare_system_explicit_id",
-                "redeclare_system_explicit_id_null_expr",
-                "redeclare_system_explicit_id_no_name",
-                "declare_different_id_same_name",
-                "declare_different_id_same_name_w_scope"
+                "get_column_by_name_no_names"
             ]
         }, {
             "id": "Sorting",
@@ -879,11 +842,10 @@
                 "prefab_w_1_child",
                 "prefab_w_2_children",
                 "prefab_w_grandchild",
-                "prefab_tree_1_2_1",
                 "prefab_w_base_w_child",
                 "prefab_w_child_w_base",
                 "prefab_w_child_w_base_w_children",
-                "prefab_w_child_new_w_count",                
+                "prefab_w_child_new_w_count",
                 "prefab_auto_override_child_component",
                 "ignore_on_add",
                 "ignore_on_remove",
@@ -912,10 +874,7 @@
                 "override_from_nested",
                 "create_multiple_nested_w_on_set",
                 "create_multiple_nested_w_on_set_in_progress",
-                "single_on_set_on_child_w_override",
-                "force_owned",
-                "force_owned_2",
-                "force_owned_nested"
+                "single_on_set_on_child_w_override"
             ]
         }, {
             "id": "System_w_FromContainer",

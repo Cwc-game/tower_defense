@@ -603,8 +603,8 @@ void trigger_set(
     int i;
     for (i = 0; i < count; i ++) {
         ecs_entity_t c = ct[i].component;
-        ecs_c_info_t *c_info = ecs_get_or_create_c_info(world, c);
 
+        ecs_c_info_t *c_info = ecs_get_or_create_c_info(world, c);
         switch(ct[i].kind) {
         case EcsOnAdd:
             el = trigger_find_or_create(&c_info->on_add, entities[i]);
@@ -802,40 +802,35 @@ ecs_entity_t ecs_new_system(
     ecs_assert(world->magic == ECS_WORLD_MAGIC, ECS_INVALID_FROM_WORKER, NULL);
     ecs_assert(!world->in_progress, ECS_INVALID_WHILE_ITERATING, NULL);
 
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
+    const char *e_name = ecs_name_from_symbol(world, name);
+    
+    ecs_entity_t result = ecs_lookup_w_type(world, name, ecs_type(EcsSignatureExpr));
+
     if (!result) {
-        result = ecs_new_entity(world, 0, name, NULL);
-    }
+        result = e ? e : ecs_new(world, 0);
+        if (name) {
+            ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+        }
+        
+        if (tag) {
+            ecs_add_entity(world, result, tag);
+        }
 
-    if (tag) {
-        ecs_add_entity(world, result, tag);
-    }
-
-    bool added = false;
-    EcsSignatureExpr *expr = ecs_get_mut(world, result, EcsSignatureExpr, &added);
-    if (added) {
-        expr->expr = signature;
+        ecs_set(world, result, EcsSignatureExpr, {signature});
+        ecs_set(world, result, EcsIterAction, {action});
     } else {
-        if (!expr->expr || !signature) {
-            if (expr->expr != signature) {
-                if (expr->expr && !strcmp(expr->expr, "0")) {
-                    /* Ok */
-                } else if (signature && !strcmp(signature, "0")) {
-                    /* Ok */
-                } else {
-                    ecs_abort(ECS_ALREADY_DEFINED, NULL);
-                }
-            }
-        } else {
-            if (strcmp(expr->expr, signature)) {
-                ecs_abort(ECS_ALREADY_DEFINED, name);
-            }
+        EcsSignatureExpr *ptr = ecs_get_mut(world, result, EcsSignatureExpr, NULL);
+        ecs_assert(ptr != NULL, ECS_INTERNAL_ERROR, NULL);
+
+        if (!ptr->expr || !signature) {
+            if (ptr->expr != signature) {
+                ecs_abort(ECS_ALREADY_DEFINED, NULL);
+            } 
+        } else
+        if (strcmp(ptr->expr, signature)) {
+            ecs_abort(ECS_ALREADY_DEFINED, name);
         }
     }
-
-    ecs_modified(world, result, EcsSignatureExpr);
-
-    ecs_set(world, result, EcsIterAction, {action});
 
     return result;
 }
@@ -853,33 +848,34 @@ ecs_entity_t ecs_new_trigger(
     ecs_entity_t component = ecs_lookup_fullpath(world, component_name);
     ecs_assert(component != 0, ECS_INVALID_COMPONENT_ID, component_name);
 
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
-    if (!result) {
-        result = ecs_new_entity(world, 0, name, NULL);
-    }
-
-    bool added = false;
-    EcsTrigger *trigger = ecs_get_mut(world, result, EcsTrigger, &added);
-    if (added) {
-        trigger->kind = kind;
-        trigger->action = action;
-        trigger->component = component;
-        trigger->ctx = NULL;
-    } else {
-        if (trigger->kind != kind) {
-            ecs_abort(ECS_ALREADY_DEFINED, name);
-        }
-
-        if (trigger->component != component) {
-            ecs_abort(ECS_ALREADY_DEFINED, name);
-        }
-
-        if (trigger->action != action) {
-            trigger->action = action;
-        }
-    }
+    const char *e_name = ecs_name_from_symbol(world, name);
     
-    ecs_modified(world, result, EcsTrigger);
+    ecs_entity_t result = ecs_lookup_w_type(world, name, ecs_type(EcsTrigger));
+    if (!result) {
+        result = e ? e : ecs_new(world, 0);
+        ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+        ecs_set(world, result, EcsTrigger, {
+            .kind = kind,
+            .action = action,
+            .component = component,
+            .ctx = NULL
+        });
+    } else {
+        EcsTrigger *ptr = ecs_get_mut(world, result, EcsTrigger, NULL);
+        ecs_assert(ptr != NULL, ECS_INTERNAL_ERROR, NULL);
+
+        if (ptr->kind != kind) {
+            ecs_abort(ECS_ALREADY_DEFINED, name);
+        }
+
+        if (ptr->component != component) {
+            ecs_abort(ECS_ALREADY_DEFINED, name);
+        }
+
+        if (ptr->action != action) {
+            ptr->action = action;
+        }
+    }
 
     return result;
 }
@@ -927,11 +923,10 @@ void FlecsSystemImport(
     ECS_TYPE_IMPL(EcsContext);
 
     /* Bootstrap ctor and dtor for EcsSystem */
-    ecs_set_component_actions_w_entity(world, ecs_entity(EcsSystem), 
-        &(EcsComponentLifecycle) {
-            .ctor = sys_ctor_init_zero,
-            .dtor = ecs_colsystem_dtor
-        });
+    ecs_c_info_t *c_info = ecs_get_or_create_c_info(world, ecs_entity(EcsSystem));
+    ecs_assert(c_info != NULL, ECS_INTERNAL_ERROR, NULL);
+    c_info->lifecycle.ctor = sys_ctor_init_zero;
+    c_info->lifecycle.dtor = ecs_colsystem_dtor;
 
     /* Create systems necessary to create systems */
     bootstrap_set_system(world, "CreateSignature", "SignatureExpr", CreateSignature);

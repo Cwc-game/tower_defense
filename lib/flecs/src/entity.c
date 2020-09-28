@@ -581,7 +581,7 @@ void instantiate_children(
         int j;
         for (j = 0; j < child_count; j ++) {
             ecs_entity_t child = children[j];
-            instantiate(world, stage, child, i_data, child_row + j, 1);
+            instantiate(world, stage, child, i_data, child_row, 1);
         }
     }    
 }
@@ -858,6 +858,22 @@ void ecs_components_on_remove(
         ecs_entity_t component = component_info[i].id;
         ecs_run_component_trigger(
             world, stage, triggers, component, table, data, row, count);
+    }
+}
+
+static
+void ecs_delete_children(
+    ecs_world_t *world,
+    ecs_entity_t parent)
+{
+    ecs_vector_t *child_tables = ecs_map_get_ptr(
+        world->child_tables, ecs_vector_t*, parent);
+
+    if (child_tables) {
+        ecs_vector_each(child_tables, ecs_table_t*, tptr, {
+            ecs_table_t *table = *tptr;
+            ecs_table_clear(world, table);
+        });
     }
 }
 
@@ -1213,7 +1229,7 @@ void commit(
                 removed);
 
             ecs_eis_set(stage, entity, &(ecs_record_t){
-                NULL, (info->is_watched == true) * -1
+                NULL, -info->is_watched
             });
         }      
     } else {        
@@ -1376,8 +1392,8 @@ const ecs_entity_t* new_w_data(
             ptr = ECS_OFFSET(ptr, size * row);
 
             ecs_c_info_t *cdata = ecs_get_c_info(world, c);
-            ecs_copy_t copy;
-            if (cdata && (copy = cdata->lifecycle.copy)) {
+            ecs_copy_t copy = cdata->lifecycle.copy;
+            if (copy) {
                 ecs_entity_t *entities = ecs_vector_first(data->entities, ecs_entity_t);
                 copy(world, c, entities, entities, ptr, src_ptr, 
                     ecs_to_size_t(size), count, cdata->lifecycle.ctx);
@@ -1823,67 +1839,6 @@ const ecs_entity_t* ecs_bulk_new_w_entity(
     return new_w_data(world, stage, table, NULL, count, NULL, NULL);
 }
 
-void ecs_clear(
-    ecs_world_t *world,
-    ecs_entity_t entity)
-{
-    ecs_assert(world != NULL, ECS_INVALID_PARAMETER, NULL);
-    ecs_assert(entity != 0, ECS_INVALID_PARAMETER, NULL);
-
-    ecs_stage_t *stage = ecs_get_stage(&world);
-    ecs_entity_info_t info;
-    info.table = NULL;
-
-    if (stage == &world->stage) {
-        get_info(world, entity, &info);
-    } else {
-        if (!get_staged_info(world, stage, entity, &info)) {
-            get_info(world, entity, &info);
-        }
-    }
-
-    ecs_table_t *table = info.table;
-    if (table) {
-        ecs_type_t type = table->type;
-
-        /* Remove all components */
-        ecs_entities_t to_remove = ecs_type_to_entities(type);
-        remove_entities_w_info(world, stage, entity, &info, &to_remove);
-    }    
-}
-
-void ecs_delete_children(
-    ecs_world_t *world,
-    ecs_entity_t parent)
-{
-    ecs_vector_t *child_tables = ecs_map_get_ptr(
-        world->child_tables, ecs_vector_t*, parent);
-
-    if (child_tables) {
-        ecs_table_t **tables = ecs_vector_first(child_tables, ecs_table_t*);
-        int32_t i, count = ecs_vector_count(child_tables);
-        for (i = 0; i < count; i ++) {
-            ecs_table_t *table = tables[i];
-
-            /* Recursively delete entities of children */
-            ecs_data_t *data = ecs_table_get_data(world, table);
-            ecs_entity_t *entities = ecs_vector_first(
-                data->entities, ecs_entity_t);
-
-            int32_t child, child_count = ecs_vector_count(data->entities);
-            for (child = 0; child < child_count; child ++) {
-                ecs_delete_children(world, entities[child]);
-            }
-
-            /* Clear components from table (invokes destructors, OnRemove) */
-            ecs_table_clear(world, table);
-
-            /* Delete table */
-            ecs_stage_delete_table(world, &world->stage, table);
-        };
-    }
-}
-
 void ecs_delete(
     ecs_world_t *world,
     ecs_entity_t entity)
@@ -1897,14 +1852,13 @@ void ecs_delete(
 
     if (stage == &world->stage) {
         get_info(world, entity, &info);
-        if (info.is_watched) {
-            ecs_delete_children(world, entity);
-        }
     } else {
         if (!get_staged_info(world, stage, entity, &info)) {
             get_info(world, entity, &info);
         }
     }
+
+    ecs_delete_children(world, entity);
 
     /* If entity has components, remove them */
     ecs_table_t *table = info.table;
@@ -2582,9 +2536,6 @@ const char* ecs_role_str(
     } else
     if (ECS_HAS_ROLE(entity, CASE)) {
         return "CASE";
-    } else
-    if (ECS_HAS_ROLE(entity, OWNED)) {
-        return "OWNED";
     } else {
         return "UNKNOWN";
     }

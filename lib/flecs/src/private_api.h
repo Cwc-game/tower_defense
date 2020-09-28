@@ -149,12 +149,6 @@ void ecs_stage_merge(
     ecs_world_t *world,
     ecs_stage_t *stage);
 
-/* Delete table from stage */
-void ecs_stage_delete_table(
-    ecs_world_t *world,
-    ecs_stage_t *stage,
-    ecs_table_t *table);
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //// Type API
@@ -409,11 +403,7 @@ int16_t ecs_to_i16(
 
 /* Convert 64 bit signed integer to 32 bit */
 int32_t ecs_to_i32(
-    int64_t v);  
-
-/* Convert 64 bit unsigned integer to 32 bit */
-uint32_t ecs_to_u32(
-    uint64_t v);        
+    int64_t v);    
 
 /* Convert signed integer to size_t */
 size_t ecs_to_size_t(
@@ -462,17 +452,11 @@ const char* ecs_name_from_symbol(
     ecs_world_t *world,
     const char *type_name); 
 
-/* Lookup an entity by name with a specific id */
-ecs_entity_t ecs_lookup_w_id(
+/* Lookup an entity by name with a specific type */
+ecs_entity_t ecs_lookup_w_type(
     ecs_world_t *world,
-    ecs_entity_t e,
-    const char *name);
-
-/* Set entity name with symbol */
-void ecs_set_symbol(
-    ecs_world_t *world,
-    ecs_entity_t e,
-    const char *name);
+    const char *name,
+    ecs_type_t type);      
 
 /* Utility that print a descriptive error string*/
 //void ecs_print_error_string(const char *error_description, const char* signature, const char* system_id, const char* component_id);

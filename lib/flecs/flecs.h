@@ -107,12 +107,8 @@ extern "C" {
 //// Language support defines
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef FLECS_LEGACY
-#include <stdbool.h>
-#endif
-
 /* The API uses the native bool type in C++, or a custom one in C */
-#if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
+#ifndef __cplusplus
 #undef bool
 #undef true
 #undef false
@@ -800,10 +796,6 @@ void* _ecs_sparse_add(
 
 #define ecs_sparse_add(sparse, type)\
     ((type*)_ecs_sparse_add(sparse, sizeof(type)))
-
-FLECS_EXPORT
-uint64_t ecs_sparse_last_id(
-    ecs_sparse_t *sparse);
 
 FLECS_EXPORT
 uint64_t ecs_sparse_new_id(
@@ -2199,10 +2191,6 @@ FLECS_EXPORT
 char* ecs_module_path_from_c(
     const char *c_name);
 
-FLECS_EXPORT
-bool ecs_component_has_actions(
-    ecs_world_t *world,
-    ecs_entity_t component);
 
 ////////////////////////////////////////////////////////////////////////////////
 //// Signature API
@@ -2335,9 +2323,6 @@ ecs_query_t* ecs_query_new_w_sig(
 #define ECS_COMPONENT_NOT_REGISTERED (44)
 #define ECS_INCONSISTENT_COMPONENT_ID (45)
 #define ECS_INVALID_CASE (46)
-#define ECS_COMPONENT_NAME_IN_USE (47)
-#define ECS_INCONSISTENT_NAME (48)
-#define ECS_INCONSISTENT_COMPONENT_ACTION (49)
 
 /** Calculate offset from address */
 #define ECS_OFFSET(o, offset) (void*)(((uintptr_t)(o)) + ((uintptr_t)(offset)))
@@ -2715,9 +2700,6 @@ typedef struct EcsTrigger {
 /** Switches allow for fast switching between mutually exclusive components */
 #define ECS_SWITCH ((ecs_entity_t)0xF6 << 56)
 
-/** Enforce ownership of a component */
-#define ECS_OWNED ((ecs_entity_t)0xF5 << 56)
-
 /** @} */
 
 /**
@@ -2883,12 +2865,12 @@ typedef struct EcsTrigger {
     ECS_VECTOR_STACK(FLECS__T##id, ecs_entity_t, &id, 1);\
     (void)ecs_type(id)
 
-/** Declare an extern tag variable.
- * Use this macro in a header when defining a tag identifier globally.
- * Must be used together with ECS_TAG_DECLARE.
+/** Declare an extern component variable.
+ * Use this macro in a header when defining a component identifier globally.
+ * Must be used together with ECS_COMPONENT_DECLARE.
  *
  * Example:
- *   ECS_TAG_EXTERN(Enemy);
+ *   ECS_COMPONENT_EXTERN(Position);
  */
 #define ECS_TAG_EXTERN(id)\
     extern ecs_entity_t id;\
@@ -2899,18 +2881,18 @@ typedef struct EcsTrigger {
  * Must be used together with ECS_TAG_DEFINE.
  *
  * Example:
- *   ECS_TAG_DECLARE(Enemy);
+ *   ECS_TAG_DECLARE(Position);
  */
 #define ECS_TAG_DECLARE(id)\
     ecs_entity_t id;\
     ecs_type_t ecs_type(id)
 
-/** Define a tag, store in variable outside of the current scope.
- * Use this macro in a header when defining a tag identifier globally.
- * Must be used together with ECS_TAG_DECLARE.
+/** Define a component, store in variable outside of the current scope.
+ * Use this macro in a header when defining a component identifier globally.
+ * Must be used together with ECS_CTAG_DECLARE.
  *
  * Example:
- *   ECS_TAG_DEFINE(world, Enemy);
+ *   ECS_TAG_DEFINE(world, Position);
  */
 #define ECS_TAG_DEFINE(world, id)\
     id = ecs_new_entity(world, id, #id, 0);\
@@ -2925,39 +2907,6 @@ typedef struct EcsTrigger {
     ECS_TYPE_VAR(id) = ecs_type_from_entity(world, id);\
     (void)id;\
     (void)ecs_type(id)
-
-/** Declare an extern type variable.
- * Use this macro in a header when defining a type globally.
- * Must be used together with ECS_TYPE_DECLARE.
- *
- * Example:
- *   ECS_TYPE_EXTERN(Movable);
- */
-#define ECS_TYPE_EXTERN(id)\
-    extern ecs_entity_t id;\
-    extern ecs_type_t ecs_type(id)
-
-/** Declare a type variable outside the scope of a function.
- * Use this macro in a header when defining a type globally.
- * Must be used together with ECS_TYPE_DEFINE.
- *
- * Example:
- *   ECS_TYPE_DECLARE(Movable);
- */
-#define ECS_TYPE_DECLARE(id)\
-    ecs_entity_t id;\
-    ecs_type_t ecs_type(id)
-
-/** Define a type, store in variable outside of the current scope.
- * Use this macro in a header when defining a type globally.
- * Must be used together with ECS_TYPE_DECLARE.
- *
- * Example:
- *   ECS_TYPE_DEFINE(world, Movable, Position, Velocity);
- */
-#define ECS_TYPE_DEFINE(world, id, ...)\
-    id = ecs_new_type(world, 0, #id, #__VA_ARGS__);\
-    ecs_type(id) = ecs_type_from_entity(world, id);\
 
 /** Declare a constructor.
  * Example:
@@ -3682,22 +3631,9 @@ ecs_entity_t ecs_get_case(
 /** @} */
 
 /**
- * @defgroup deleting Deleting Entities and components
+ * @defgroup deleting Deleting Entities
  * @{
  */
-
-/** Clear all components.
- * This operation will clear all components from an entity but will not delete
- * the entity itself. This effectively prevents the entity id from being 
- * recycled.
- *
- * @param world The world.
- * @param entity The entity.
- */
-FLECS_EXPORT
-void ecs_clear(
-    ecs_world_t *world,
-    ecs_entity_t entity);
 
 /** Delete an entity.
  * This operation will delete an entity and all of its components. The entity id
@@ -3712,19 +3648,6 @@ FLECS_EXPORT
 void ecs_delete(
     ecs_world_t *world,
     ecs_entity_t entity);
-
-
-/** Delete children of an entity.
- * This operation deletes all children of a parent entity. If a parent has no
- * children this operation has no effect.
- *
- * @param world The world.
- * @param parent The parent entity.
- */
-FLECS_EXPORT
-void ecs_delete_children(
-    ecs_world_t *world,
-    ecs_entity_t parent);
 
 /** @} */
 
@@ -7388,9 +7311,6 @@ public:
 
     world(world&& obj) {
         m_world = obj.m_world;
-        m_owned = obj.m_owned;
-        obj.m_world = nullptr;
-        obj.m_owned = false;
     }
 
     /** Not allowed to copy a world. May only take a reference.
@@ -7398,17 +7318,12 @@ public:
     world& operator=(const world& obj) = delete;
 
     world& operator=(world&& obj) {
-        this->~world();
-
         m_world = obj.m_world;
-        m_owned = obj.m_owned;
-        obj.m_world = nullptr;
-        obj.m_owned = false;
         return *this;
     }
     
     ~world() { 
-        if (m_owned && m_world) {
+        if (m_owned) {
             ecs_fini(m_world); 
         }
     }
@@ -7417,14 +7332,6 @@ public:
      */
     world_t* c_ptr() const {
         return m_world;
-    }
-
-    /** Enable tracing.
-     *
-     * @param level The tracing level.
-     */
-    static void enable_tracing(int level) {
-        ecs_tracing_enable(level);
     }
 
     /** Progress world, run all systems.
@@ -7487,24 +7394,8 @@ public:
     std::int32_t get_tick() const {
         const ecs_world_info_t *stats = ecs_get_world_info(m_world);
         return stats->frame_count_total;
+
     }
-
-    /** Set timescale
-     *
-     * @return Monotonically increasing frame count.
-     */
-    void set_time_scale(float mul) const {
-        ecs_set_time_scale(m_world, mul);
-    }  
-
-    /** Get timescale
-     *
-     * @return Monotonically increasing frame count.
-     */
-    float get_time_scale() const {
-        const ecs_world_info_t *stats = ecs_get_world_info(m_world);
-        return stats->time_scale;
-    }        
 
     /** Set world context.
      * Set a context value that can be accessed by anyone that has a reference
@@ -7714,57 +7605,57 @@ public:
     /** Create a prefab.
      */
     template <typename... Args>
-    flecs::entity entity(Args &&... args) const;
+    flecs::entity entity(Args &&... args);
 
     /** Create an entity.
      */
     template <typename... Args>
-    flecs::entity prefab(Args &&... args) const;
+    flecs::entity prefab(Args &&... args);
 
     /** Create a type.
      */
     template <typename... Args>
-    flecs::type type(Args &&... args) const;
+    flecs::type type(Args &&... args);
 
     /** Create a module.
      */
     template <typename Module, typename... Args>
-    flecs::entity module(Args &&... args) const;
+    flecs::entity module(Args &&... args);
 
     /** Import a module.
      */
     template <typename Module>
-    flecs::entity import(); // Cannot be const because modules accept a non-const world
+    flecs::entity import();
 
     /** Create an system.
      */
     template <typename... Comps, typename... Args>
-    flecs::system<Comps...> system(Args &&... args) const;
+    flecs::system<Comps...> system(Args &&... args);
 
     /** Create a query.
      */
     template <typename... Comps, typename... Args>
-    flecs::query<Comps...> query(Args &&... args) const;
+    flecs::query<Comps...> query(Args &&... args);
 
     /** Register a component.
      */
     template <typename T, typename... Args>
-    flecs::entity component(Args &&... args) const;
+    flecs::entity component(Args &&... args);
 
     /** Register a POD component.
      */
     template <typename T, typename... Args>
-    flecs::entity pod_component(Args &&... args) const;
+    flecs::entity pod_component(Args &&... args);
 
     /** Register a relocatable component.
      */
     template <typename T, typename... Args>
-    flecs::entity relocatable_component(Args &&... args) const;
+    flecs::entity relocatable_component(Args &&... args);
 
     /** Create a snapshot.
      */
     template <typename... Args>
-    flecs::snapshot snapshot(Args &&... args) const;
+    flecs::snapshot snapshot(Args &&... args);
     
 private:
     void init_builtin_components();
@@ -8105,19 +7996,6 @@ public:
      */
     base_type& remove_instanceof(const entity& base) const;
 
-    /** Add owned flag for component (forces ownership when instantiating)
-     *
-     * @tparam T The component for which to add the OWNED flag
-     */    
-    template <typename T>
-    base_type& add_owned() const {
-        static_cast<base_type*>(this)->invoke(
-        [](world_t *world, entity_t id) {
-            ecs_add_entity(world, id, ECS_OWNED | _::component_info<T>::id(world));
-        });
-        return *static_cast<base_type*>(this);  
-    }
-
     /** Add a switch to an entity by id.
      * The switch entity must be a type, that is it must have the EcsType
      * component. Entities created with flecs::type are valid here.
@@ -8240,7 +8118,7 @@ public:
      * @param value The value to assign to the component.
      */
     template <typename T>
-    const base_type& set(T&& value) const {
+    const base_type& set(const T&& value) const {
         static_cast<base_type*>(this)->invoke(
         [&value](world_t *world, entity_t id) {
             ecs_set_ptr_w_entity(
@@ -8426,11 +8304,7 @@ public:
      */
     explicit entity(world_t *world) 
         : m_world( world )
-    {
-        if (m_world) {
-            m_id = ecs_new_w_type(m_world, 0);
-        }
-    }
+        , m_id( ecs_new_w_type(m_world, 0) ) { }
 
     /** Create a named entity.
      * Named entities can be looked up with the lookup functions. Entity names
@@ -8514,7 +8388,7 @@ public:
         return this->id() != e.id();
     }            
 
-    explicit operator bool() {
+    operator bool() {
         return m_id != 0;
     }
 
@@ -8528,11 +8402,6 @@ public:
     flecs::entity null(const world& world) {
         return flecs::entity(world.c_ptr(), (ecs_entity_t)0);
     }
-
-    static
-    flecs::entity null() {
-        return flecs::entity(nullptr, (ecs_entity_t)0);
-    }    
 
     /** Get entity id.
      * @return The integer entity id.
@@ -8895,14 +8764,6 @@ public:
         return ref<T>(m_world, m_id);
     }
 
-    /** Clear an entity.
-     * This operation removes all components from an entity without recycling
-     * the entity id.
-     */
-    void clear() const {
-        ecs_clear(m_world, m_id);
-    }
-
     /** Delete an entity.
      * Entities have to be deleted explicitly, and are not deleted when the
      * flecs::entity object goes out of scope.
@@ -9157,7 +9018,7 @@ protected:
 /** Prefab class */
 class prefab final : public entity {
 public:
-    explicit prefab(const flecs::world& world, const char *name = nullptr) 
+    prefab(const flecs::world& world, const char *name = nullptr) 
         : entity(world, name)
     {
         this->add(flecs::Prefab);
@@ -9171,7 +9032,7 @@ public:
 
 class type final : entity {
 public:
-    explicit type(const flecs::world& world, const char *name = nullptr, const char *expr = nullptr)
+    type(const flecs::world& world, const char *name = nullptr, const char *expr = nullptr)
         : entity(world, ecs_new_type(world.c_ptr(), 0, name, expr))
     { 
         sync_from_flecs();
@@ -9557,28 +9418,18 @@ void register_lifecycle_actions(
     bool copy,
     bool move)
 {
-    if (!ecs_component_has_actions(world, component)) {
-        EcsComponentLifecycle cl{};
-        if (ctor) {
-            cl.ctor = _::component_ctor<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
-        }
-        if (dtor) {
-            cl.dtor = _::component_dtor<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
-        }
-        if (copy) {
-            cl.copy = _::component_copy<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
-        }
-        if (move) {
-            cl.move = _::component_move<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
-        }
-        ecs_set_component_actions_w_entity( world, component, &cl);
-    }
+    EcsComponentLifecycle cl{};
+    cl.ctor = _::component_ctor<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
+    cl.dtor = _::component_dtor<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
+    cl.copy = _::component_copy<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
+    cl.move = _::component_move<typename std::remove_const<typename std::remove_pointer<T>::type>::type>;
+    ecs_set_component_actions_w_entity( world, component, &cl);
 }
 
 template <typename T>
 class component_info final {
 public:
-    static void init(world_t* world, entity_t entity, bool allow_tag = true) {
+    static void init(world_t* world, entity_t entity) {
         if (s_id) {
             ecs_assert(s_id == entity, ECS_INCONSISTENT_COMPONENT_ID, 
                 _::name_helper<T>::name());
@@ -9595,48 +9446,33 @@ public:
         s_id = entity;
         s_type = ecs_type_from_entity(world, entity);
         s_name = ecs_get_fullpath(world, entity);
-        s_allow_tag = allow_tag;
     }
 
-    static entity_t id_no_lifecycle(world_t *world = nullptr, const char *name = nullptr, bool allow_tag = true) {
+    static entity_t id_no_lifecycle(world_t *world = nullptr, const char *name = nullptr) {
         if (!s_id) {
             if (!name) {
                 name = _::name_helper<T>::name();
             }
-
-            s_allow_tag = allow_tag;
-
             ecs_assert(world != nullptr, ECS_COMPONENT_NOT_REGISTERED, name);
 
-            // Create entity with name first. This ensurs that the component is
-            // created in the right location in the hierarchy, in case a scoped
-            // name is used.
-            flecs::world w(world);
-            flecs::entity result = entity(w, name, true);
-            
-            ecs_entity_t entity = ecs_new_component(
-                world, result.id(), nullptr, 
-                size(), 
-                alignment());
-
-            ecs_assert(entity == result.id(), ECS_INTERNAL_ERROR, NULL);
+            entity_t entity = ecs_new_component(
+                world, 0, name, 
+                sizeof(typename std::remove_pointer<T>::type), 
+                alignof(typename std::remove_pointer<T>::type));
 
             init(world, entity);
         }
 
         ecs_assert(s_id != 0, ECS_INTERNAL_ERROR, NULL);
 
-        return s_id;
+        return s_id;        
     }
 
-    static entity_t id(world_t *world = nullptr, const char *name = nullptr, bool allow_tag = true) {
+    static entity_t id(world_t *world = nullptr, const char *name = nullptr) {
         if (!s_id) {
-            id_no_lifecycle(world, name, allow_tag);
-
-            if (size()) {
-                register_lifecycle_actions<T>(world, s_id,
-                    true, true, true, true);
-            }
+            id_no_lifecycle(world, name);
+            register_lifecycle_actions<T>(world, s_id,
+                true, true, true, true);
         }
 
         ecs_assert(s_id != 0, ECS_INTERNAL_ERROR, NULL);
@@ -9674,41 +9510,15 @@ public:
         return s_id != 0;
     }
 
-    static size_t size() {
-        if (s_allow_tag && std::is_empty<T>::value) {
-            return 0;
-        } else {
-            return sizeof(typename std::remove_pointer<T>::type);
-        }
-    }
-
-    static size_t alignment() {
-        if (size() == 0) {
-            return 0;
-        } else {
-            return alignof(typename std::remove_pointer<T>::type);
-        }
-    }
-
-    // This function is only used to test cross-translation unit features. No
-    // code other than test cases should invoke this function.
-    static void reset() {
-        s_id = 0;
-        s_type = NULL;
-        s_name = NULL;
-    }
-
 private:
     static entity_t s_id;
     static type_t s_type;
     static const char *s_name;
-    static bool s_allow_tag;
 };
 
 template <typename T> entity_t component_info<T>::s_id( 0 );
 template <typename T> type_t component_info<T>::s_type( nullptr );
 template <typename T> const char* component_info<T>::s_name( nullptr );
-template <typename T> bool component_info<T>::s_allow_tag( true );
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -9719,7 +9529,7 @@ template <typename T> bool component_info<T>::s_allow_tag( true );
 
 /** Plain old datatype, no lifecycle actions are registered */
 template <typename T>
-flecs::entity pod_component(const flecs::world& world, const char *name = nullptr, bool allow_tag = true) {
+flecs::entity pod_component(const flecs::world& world, const char *name = nullptr) {
     if (!name) {
         name = _::name_helper<T>::name();
     }
@@ -9730,7 +9540,7 @@ flecs::entity pod_component(const flecs::world& world, const char *name = nullpt
     if (_::component_info<T>::registered()) {
         /* To support components across multiple worlds, ensure that the
          * component ids are the same. */
-        id = _::component_info<T>::id_no_lifecycle(world_ptr, name, allow_tag);
+        id = _::component_info<T>::id_no_lifecycle(world_ptr, name);
 
         /* If entity is not empty check if the name matches */
         if (ecs_get_type(world_ptr, id) != nullptr) {
@@ -9748,39 +9558,16 @@ flecs::entity pod_component(const flecs::world& world, const char *name = nullpt
 
         /* If a component was already registered with this id but with a 
          * different size, the ecs_new_component function will fail. */
-
-        /* We need to explicitly call ecs_new_component here again. Even though
-         * the component was already registered, it may have been registered
-         * with a different world. This ensures that the component is registered
-         * with the same id for the current world. 
-         * If the component was registered already, nothing will change. */
-        ecs_entity_t entity = ecs_new_component(
-            world.c_ptr(), id, nullptr, 
-            _::component_info<T>::size(), 
-            _::component_info<T>::alignment());
-        
-        ecs_assert(entity == id, ECS_INTERNAL_ERROR, NULL);
-
-        /* This functionality could have been put in id_no_lifecycle, but since
-         * this code happens when a component is registered, and the entire API
-         * calls id_no_lifecycle, this would add a lot of overhead to each call.
-         * This is why when using multiple worlds, components should be 
-         * registered explicitly. */
-    } else {
-        /* If the component is not yet registered, ensure no other component
-         * or entity has been registered with this name */
-        ecs_entity_t e = ecs_lookup_fullpath(world_ptr, name);
-        ecs_assert(e == 0, ECS_COMPONENT_NAME_IN_USE, name);
-
-        id = _::component_info<T>::id_no_lifecycle(world_ptr, name, allow_tag);
     }
 
-    _::component_info<T>::init(world_ptr, id, allow_tag);
-    _::component_info<const T>::init(world_ptr, id, allow_tag);
-    _::component_info<T*>::init(world_ptr, id, allow_tag);
-    _::component_info<T&>::init(world_ptr, id, allow_tag);
+    flecs::entity result = entity(world, name, true);
+    ecs_new_component(world_ptr, result.id(), nullptr, sizeof(T), alignof(T));
+    _::component_info<T>::init(world_ptr, result.id());
+    _::component_info<const T>::init(world_ptr, result.id());
+    _::component_info<T*>::init(world_ptr, result.id());
+    _::component_info<T&>::init(world_ptr, result.id());
     
-    return world.entity(id);
+    return result;
 }
 
 /** Regular component with ctor, dtor copy and move actions */
@@ -9788,10 +9575,16 @@ template <typename T>
 flecs::entity component(const flecs::world& world, const char *name = nullptr) {
     flecs::entity result = pod_component<T>(world, name);
 
-    if (_::component_info<T>::size()) {
-        _::register_lifecycle_actions<T>(world.c_ptr(), result.id(),
-            true, true, true, true);
-    }
+    EcsComponentLifecycle cl{};
+    cl.ctor = _::component_ctor<T>;
+    cl.dtor = _::component_dtor<T>;
+    cl.copy = _::component_copy<T>;
+    cl.move = _::component_move<T>;
+    
+    ecs_set_component_actions_w_entity(
+        world.c_ptr(), 
+        _::component_info<T>::id(world.c_ptr()), 
+        &cl);
 
     return result;
 }
@@ -9801,8 +9594,15 @@ template <typename T>
 flecs::entity relocatable_component(const flecs::world& world, const char *name = nullptr) {
     flecs::entity result = pod_component<T>(world, name);
 
-    _::register_lifecycle_actions<T>(world.c_ptr(), result.id(),
-        true, true, true, false);
+    EcsComponentLifecycle cl{};
+    cl.ctor = _::component_ctor<T>;
+    cl.dtor = _::component_dtor<T>;
+    cl.copy = _::component_copy<T>;
+    
+    ecs_set_component_actions_w_entity(
+        world.c_ptr(), 
+        _::component_info<T>::id(world.c_ptr()), 
+        &cl);
 
     return result;
 }
@@ -9820,7 +9620,7 @@ flecs::entity_t type_id() {
 template <typename T>
 flecs::entity module(const flecs::world& world, const char *name = nullptr) {
     ecs_set_scope(world.c_ptr(), 0);
-    flecs::entity result = pod_component<T>(world, name, false);
+    flecs::entity result = pod_component<T>(world, name);
     ecs_set_scope(world.c_ptr(), result.id());
     return result;
 }
@@ -9833,9 +9633,6 @@ flecs::entity module(const flecs::world& world, const char *name = nullptr) {
 template <typename T>
 flecs::entity import(world& world) {
     if (!_::component_info<T>::registered()) {
-        ecs_trace_1("import %s", _::name_helper<T>::name());
-        ecs_log_push();
-
         ecs_entity_t scope = ecs_get_scope(world.c_ptr());
 
         // Allocate module, so the this ptr will remain stable
@@ -9847,12 +9644,10 @@ flecs::entity import(world& world) {
 
         ecs_set_ptr_w_entity(
             world.c_ptr(),
-            m.id(),
-            _::component_info<T>::id_no_lifecycle(world.c_ptr()), 
-            _::component_info<T>::size(),
-            module_data);
-
-        ecs_log_pop();
+             m.id(),
+             _::component_info<T>::id_no_lifecycle(world.c_ptr()), 
+             sizeof(T),
+             module_data);
 
         return m;
     } else {
@@ -10299,7 +10094,7 @@ private:
 template<typename ... Components>
 class system final : public entity {
 public:
-    explicit system(const flecs::world& world, const char *name = nullptr, const char *signature = nullptr) 
+    system(const flecs::world& world, const char *name = nullptr, const char *signature = nullptr) 
         : entity(world, name)
         , m_kind(static_cast<ecs_entity_t>(OnUpdate)) 
         , m_signature(signature)
@@ -10700,7 +10495,7 @@ private:
 
 class reader final {
 public:
-    explicit reader(world& world) {
+    reader(world& world) {
         m_reader = ecs_reader_init(world.c_ptr());
     }
 
@@ -10725,7 +10520,7 @@ private:
 
 class writer final {
 public:
-    explicit writer(world& world) {
+    writer(world& world) {
         m_writer = ecs_writer_init(world.c_ptr());
     }
 
@@ -11076,32 +10871,32 @@ inline entity world::lookup(std::string& name) const {
 }
 
 template <typename... Args>
-inline flecs::entity world::entity(Args &&... args) const {
+inline flecs::entity world::entity(Args &&... args) {
     return flecs::entity(*this, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-inline flecs::entity world::prefab(Args &&... args) const {
+inline flecs::entity world::prefab(Args &&... args) {
     return flecs::prefab(*this, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-inline flecs::type world::type(Args &&... args) const {
+inline flecs::type world::type(Args &&... args) {
     return flecs::type(*this, std::forward<Args>(args)...);
 }
 
 template <typename... Comps, typename... Args>
-inline flecs::system<Comps...> world::system(Args &&... args) const {
+inline flecs::system<Comps...> world::system(Args &&... args) {
     return flecs::system<Comps...>(*this, std::forward<Args>(args)...);
 }
 
 template <typename... Comps, typename... Args>
-inline flecs::query<Comps...> world::query(Args &&... args) const {
+inline flecs::query<Comps...> world::query(Args &&... args) {
     return flecs::query<Comps...>(*this, std::forward<Args>(args)...);
 }
 
 template <typename Module, typename... Args>
-inline flecs::entity world::module(Args &&... args) const {
+inline flecs::entity world::module(Args &&... args) {
     return flecs::module<Module>(*this, std::forward<Args>(args)...);
 }
 
@@ -11111,22 +10906,22 @@ inline flecs::entity world::import() {
 }
 
 template <typename T, typename... Args>
-inline flecs::entity world::component(Args &&... args) const {
+inline flecs::entity world::component(Args &&... args) {
     return flecs::component<T>(*this, std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args>
-inline flecs::entity world::pod_component(Args &&... args) const {
+inline flecs::entity world::pod_component(Args &&... args) {
     return flecs::pod_component<T>(*this, std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args>
-inline flecs::entity world::relocatable_component(Args &&... args) const {
+inline flecs::entity world::relocatable_component(Args &&... args) {
     return flecs::relocatable_component<T>(*this, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-inline flecs::snapshot world::snapshot(Args &&... args) const {
+inline flecs::snapshot world::snapshot(Args &&... args) {
     return flecs::snapshot(*this, std::forward<Args>(args)...);
 }
 

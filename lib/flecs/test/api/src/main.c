@@ -129,7 +129,6 @@ void GlobalComponentIds_declare_2_world(void);
 void GlobalComponentIds_declare_tag(void);
 void GlobalComponentIds_declare_tag_w_entity(void);
 void GlobalComponentIds_declare_entity(void);
-void GlobalComponentIds_declare_type(void);
 
 // Testsuite 'Hierarchies'
 void Hierarchies_empty_scope(void);
@@ -140,7 +139,6 @@ void Hierarchies_get_parent_from_root(void);
 void Hierarchies_tree_iter_empty(void);
 void Hierarchies_tree_iter_1_table(void);
 void Hierarchies_tree_iter_2_tables(void);
-void Hierarchies_tree_iter_w_filter(void);
 void Hierarchies_path_depth_0(void);
 void Hierarchies_path_depth_1(void);
 void Hierarchies_path_depth_2(void);
@@ -191,16 +189,6 @@ void Hierarchies_add_path_existing_depth_0(void);
 void Hierarchies_add_path_existing_depth_1(void);
 void Hierarchies_add_path_existing_depth_2(void);
 void Hierarchies_new_w_child_in_root(void);
-void Hierarchies_delete_child(void);
-void Hierarchies_delete_2_children(void);
-void Hierarchies_delete_2_children_different_type(void);
-void Hierarchies_delete_tree_2_levels(void);
-void Hierarchies_delete_tree_3_levels(void);
-void Hierarchies_delete_tree_count_tables(void);
-void Hierarchies_delete_tree_staged(void);
-void Hierarchies_get_child_count(void);
-void Hierarchies_get_child_count_2_tables(void);
-void Hierarchies_get_child_count_no_children(void);
 
 // Testsuite 'Add_bulk'
 void Add_bulk_add_comp_from_comp_to_empty(void);
@@ -298,8 +286,6 @@ void Delete_delete_2nd_of_3(void);
 void Delete_delete_2_of_3(void);
 void Delete_delete_3_of_3(void);
 void Delete_delete_w_on_remove(void);
-void Delete_clear_1_component(void);
-void Delete_clear_2_components(void);
 
 // Testsuite 'Delete_w_filter'
 void Delete_w_filter_delete_1(void);
@@ -345,10 +331,6 @@ void Lookup_get_name(void);
 void Lookup_get_name_no_name(void);
 void Lookup_get_name_from_empty(void);
 void Lookup_lookup_by_id(void);
-void Lookup_lookup_symbol_by_id(void);
-void Lookup_lookup_name_w_digit(void);
-void Lookup_lookup_symbol_w_digit(void);
-void Lookup_lookup_path_w_digit(void);
 void Lookup_set_name_of_existing(void);
 void Lookup_change_name_of_existing(void);
 
@@ -416,10 +398,6 @@ void ComponentLifecycle_copy_on_override_trait(void);
 void ComponentLifecycle_copy_on_override_trait_tag(void);
 void ComponentLifecycle_copy_on_set_trait(void);
 void ComponentLifecycle_copy_on_set_trait_tag(void);
-void ComponentLifecycle_prevent_lifecycle_overwrite(void);
-void ComponentLifecycle_prevent_lifecycle_overwrite_null_callbacks(void);
-void ComponentLifecycle_allow_lifecycle_overwrite_equal_callbacks(void);
-void ComponentLifecycle_set_lifecycle_after_trigger(void);
 
 // Testsuite 'Pipeline'
 void Pipeline_system_order_same_phase(void);
@@ -497,21 +475,6 @@ void SystemMisc_two_named_columns_of_two(void);
 void SystemMisc_get_column_by_name(void);
 void SystemMisc_get_column_by_name_not_found(void);
 void SystemMisc_get_column_by_name_no_names(void);
-void SystemMisc_redeclare_system_same_expr(void);
-void SystemMisc_redeclare_system_null_expr(void);
-void SystemMisc_redeclare_system_0_expr(void);
-void SystemMisc_redeclare_system_different_expr(void);
-void SystemMisc_redeclare_system_null_and_expr(void);
-void SystemMisc_redeclare_system_expr_and_null(void);
-void SystemMisc_redeclare_system_expr_and_0(void);
-void SystemMisc_redeclare_system_0_and_expr(void);
-void SystemMisc_redeclare_system_0_and_null(void);
-void SystemMisc_redeclare_system_null_and_0(void);
-void SystemMisc_redeclare_system_explicit_id(void);
-void SystemMisc_redeclare_system_explicit_id_null_expr(void);
-void SystemMisc_redeclare_system_explicit_id_no_name(void);
-void SystemMisc_declare_different_id_same_name(void);
-void SystemMisc_declare_different_id_same_name_w_scope(void);
 
 // Testsuite 'Sorting'
 void Sorting_sort_by_component(void);
@@ -799,7 +762,6 @@ void Prefab_match_table_created_in_progress(void);
 void Prefab_prefab_w_1_child(void);
 void Prefab_prefab_w_2_children(void);
 void Prefab_prefab_w_grandchild(void);
-void Prefab_prefab_tree_1_2_1(void);
 void Prefab_prefab_w_base_w_child(void);
 void Prefab_prefab_w_child_w_base(void);
 void Prefab_prefab_w_child_w_base_w_children(void);
@@ -833,9 +795,6 @@ void Prefab_override_from_nested(void);
 void Prefab_create_multiple_nested_w_on_set(void);
 void Prefab_create_multiple_nested_w_on_set_in_progress(void);
 void Prefab_single_on_set_on_child_w_override(void);
-void Prefab_force_owned(void);
-void Prefab_force_owned_2(void);
-void Prefab_force_owned_nested(void);
 
 // Testsuite 'System_w_FromContainer'
 void System_w_FromContainer_1_column_from_container(void);
@@ -1708,10 +1667,6 @@ bake_test_case GlobalComponentIds_testcases[] = {
     {
         "declare_entity",
         GlobalComponentIds_declare_entity
-    },
-    {
-        "declare_type",
-        GlobalComponentIds_declare_type
     }
 };
 
@@ -1747,10 +1702,6 @@ bake_test_case Hierarchies_testcases[] = {
     {
         "tree_iter_2_tables",
         Hierarchies_tree_iter_2_tables
-    },
-    {
-        "tree_iter_w_filter",
-        Hierarchies_tree_iter_w_filter
     },
     {
         "path_depth_0",
@@ -1951,46 +1902,6 @@ bake_test_case Hierarchies_testcases[] = {
     {
         "new_w_child_in_root",
         Hierarchies_new_w_child_in_root
-    },
-    {
-        "delete_child",
-        Hierarchies_delete_child
-    },
-    {
-        "delete_2_children",
-        Hierarchies_delete_2_children
-    },
-    {
-        "delete_2_children_different_type",
-        Hierarchies_delete_2_children_different_type
-    },
-    {
-        "delete_tree_2_levels",
-        Hierarchies_delete_tree_2_levels
-    },
-    {
-        "delete_tree_3_levels",
-        Hierarchies_delete_tree_3_levels
-    },
-    {
-        "delete_tree_count_tables",
-        Hierarchies_delete_tree_count_tables
-    },
-    {
-        "delete_tree_staged",
-        Hierarchies_delete_tree_staged
-    },
-    {
-        "get_child_count",
-        Hierarchies_get_child_count
-    },
-    {
-        "get_child_count_2_tables",
-        Hierarchies_get_child_count_2_tables
-    },
-    {
-        "get_child_count_no_children",
-        Hierarchies_get_child_count_no_children
     }
 };
 
@@ -2339,14 +2250,6 @@ bake_test_case Delete_testcases[] = {
     {
         "delete_w_on_remove",
         Delete_delete_w_on_remove
-    },
-    {
-        "clear_1_component",
-        Delete_clear_1_component
-    },
-    {
-        "clear_2_components",
-        Delete_clear_2_components
     }
 };
 
@@ -2512,22 +2415,6 @@ bake_test_case Lookup_testcases[] = {
     {
         "lookup_by_id",
         Lookup_lookup_by_id
-    },
-    {
-        "lookup_symbol_by_id",
-        Lookup_lookup_symbol_by_id
-    },
-    {
-        "lookup_name_w_digit",
-        Lookup_lookup_name_w_digit
-    },
-    {
-        "lookup_symbol_w_digit",
-        Lookup_lookup_symbol_w_digit
-    },
-    {
-        "lookup_path_w_digit",
-        Lookup_lookup_path_w_digit
     },
     {
         "set_name_of_existing",
@@ -2781,22 +2668,6 @@ bake_test_case ComponentLifecycle_testcases[] = {
     {
         "copy_on_set_trait_tag",
         ComponentLifecycle_copy_on_set_trait_tag
-    },
-    {
-        "prevent_lifecycle_overwrite",
-        ComponentLifecycle_prevent_lifecycle_overwrite
-    },
-    {
-        "prevent_lifecycle_overwrite_null_callbacks",
-        ComponentLifecycle_prevent_lifecycle_overwrite_null_callbacks
-    },
-    {
-        "allow_lifecycle_overwrite_equal_callbacks",
-        ComponentLifecycle_allow_lifecycle_overwrite_equal_callbacks
-    },
-    {
-        "set_lifecycle_after_trigger",
-        ComponentLifecycle_set_lifecycle_after_trigger
     }
 };
 
@@ -3095,66 +2966,6 @@ bake_test_case SystemMisc_testcases[] = {
     {
         "get_column_by_name_no_names",
         SystemMisc_get_column_by_name_no_names
-    },
-    {
-        "redeclare_system_same_expr",
-        SystemMisc_redeclare_system_same_expr
-    },
-    {
-        "redeclare_system_null_expr",
-        SystemMisc_redeclare_system_null_expr
-    },
-    {
-        "redeclare_system_0_expr",
-        SystemMisc_redeclare_system_0_expr
-    },
-    {
-        "redeclare_system_different_expr",
-        SystemMisc_redeclare_system_different_expr
-    },
-    {
-        "redeclare_system_null_and_expr",
-        SystemMisc_redeclare_system_null_and_expr
-    },
-    {
-        "redeclare_system_expr_and_null",
-        SystemMisc_redeclare_system_expr_and_null
-    },
-    {
-        "redeclare_system_expr_and_0",
-        SystemMisc_redeclare_system_expr_and_0
-    },
-    {
-        "redeclare_system_0_and_expr",
-        SystemMisc_redeclare_system_0_and_expr
-    },
-    {
-        "redeclare_system_0_and_null",
-        SystemMisc_redeclare_system_0_and_null
-    },
-    {
-        "redeclare_system_null_and_0",
-        SystemMisc_redeclare_system_null_and_0
-    },
-    {
-        "redeclare_system_explicit_id",
-        SystemMisc_redeclare_system_explicit_id
-    },
-    {
-        "redeclare_system_explicit_id_null_expr",
-        SystemMisc_redeclare_system_explicit_id_null_expr
-    },
-    {
-        "redeclare_system_explicit_id_no_name",
-        SystemMisc_redeclare_system_explicit_id_no_name
-    },
-    {
-        "declare_different_id_same_name",
-        SystemMisc_declare_different_id_same_name
-    },
-    {
-        "declare_different_id_same_name_w_scope",
-        SystemMisc_declare_different_id_same_name_w_scope
     }
 };
 
@@ -4230,10 +4041,6 @@ bake_test_case Prefab_testcases[] = {
         Prefab_prefab_w_grandchild
     },
     {
-        "prefab_tree_1_2_1",
-        Prefab_prefab_tree_1_2_1
-    },
-    {
         "prefab_w_base_w_child",
         Prefab_prefab_w_base_w_child
     },
@@ -4364,18 +4171,6 @@ bake_test_case Prefab_testcases[] = {
     {
         "single_on_set_on_child_w_override",
         Prefab_single_on_set_on_child_w_override
-    },
-    {
-        "force_owned",
-        Prefab_force_owned
-    },
-    {
-        "force_owned_2",
-        Prefab_force_owned_2
-    },
-    {
-        "force_owned_nested",
-        Prefab_force_owned_nested
     }
 };
 
@@ -5982,14 +5777,14 @@ static bake_test_suite suites[] = {
         "GlobalComponentIds",
         NULL,
         NULL,
-        7,
+        6,
         GlobalComponentIds_testcases
     },
     {
         "Hierarchies",
         NULL,
         NULL,
-        69,
+        58,
         Hierarchies_testcases
     },
     {
@@ -6045,7 +5840,7 @@ static bake_test_suite suites[] = {
         "Delete",
         NULL,
         NULL,
-        11,
+        9,
         Delete_testcases
     },
     {
@@ -6066,7 +5861,7 @@ static bake_test_suite suites[] = {
         "Lookup",
         NULL,
         NULL,
-        17,
+        13,
         Lookup_testcases
     },
     {
@@ -6087,7 +5882,7 @@ static bake_test_suite suites[] = {
         "ComponentLifecycle",
         NULL,
         NULL,
-        42,
+        38,
         ComponentLifecycle_testcases
     },
     {
@@ -6101,7 +5896,7 @@ static bake_test_suite suites[] = {
         "SystemMisc",
         NULL,
         NULL,
-        73,
+        58,
         SystemMisc_testcases
     },
     {
@@ -6206,7 +6001,7 @@ static bake_test_suite suites[] = {
         "Prefab",
         NULL,
         NULL,
-        64,
+        60,
         Prefab_testcases
     },
     {

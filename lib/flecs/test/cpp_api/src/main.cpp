@@ -43,12 +43,6 @@ void Entity_has_instanceof_indirect(void);
 void Entity_null_string(void);
 void Entity_set_name(void);
 void Entity_change_name(void);
-void Entity_delete(void);
-void Entity_clear(void);
-void Entity_foce_owned(void);
-void Entity_force_owned_2(void);
-void Entity_force_owned_nested(void);
-void Entity_tag_has_size_zero(void);
 
 // Testsuite 'Traits'
 void Traits_add_component_trait(void);
@@ -178,9 +172,6 @@ void ImplicitComponents_system_optional(void);
 void ImplicitComponents_system_const(void);
 void ImplicitComponents_query(void);
 void ImplicitComponents_implicit_name(void);
-void ImplicitComponents_reinit(void);
-void ImplicitComponents_reinit_scoped(void);
-void ImplicitComponents_reinit_w_lifecycle(void);
 
 // Testsuite 'Snapshot'
 void Snapshot_simple_snapshot(void);
@@ -209,7 +200,6 @@ void World_multi_world_empty(void);
 void World_multi_world_component(void);
 void World_multi_world_component_namespace(void);
 void World_type_id(void);
-void World_different_comp_same_name(void);
 
 bake_test_case Entity_testcases[] = {
     {
@@ -347,30 +337,6 @@ bake_test_case Entity_testcases[] = {
     {
         "change_name",
         Entity_change_name
-    },
-    {
-        "delete",
-        Entity_delete
-    },
-    {
-        "clear",
-        Entity_clear
-    },
-    {
-        "foce_owned",
-        Entity_foce_owned
-    },
-    {
-        "force_owned_2",
-        Entity_force_owned_2
-    },
-    {
-        "force_owned_nested",
-        Entity_force_owned_nested
-    },
-    {
-        "tag_has_size_zero",
-        Entity_tag_has_size_zero
     }
 };
 
@@ -832,18 +798,6 @@ bake_test_case ImplicitComponents_testcases[] = {
     {
         "implicit_name",
         ImplicitComponents_implicit_name
-    },
-    {
-        "reinit",
-        ImplicitComponents_reinit
-    },
-    {
-        "reinit_scoped",
-        ImplicitComponents_reinit_scoped
-    },
-    {
-        "reinit_w_lifecycle",
-        ImplicitComponents_reinit_w_lifecycle
     }
 };
 
@@ -941,10 +895,6 @@ bake_test_case World_testcases[] = {
     {
         "type_id",
         World_type_id
-    },
-    {
-        "different_comp_same_name",
-        World_different_comp_same_name
     }
 };
 
@@ -953,7 +903,7 @@ static bake_test_suite suites[] = {
         "Entity",
         NULL,
         NULL,
-        40,
+        34,
         Entity_testcases
     },
     {
@@ -1030,7 +980,7 @@ static bake_test_suite suites[] = {
         "ImplicitComponents",
         NULL,
         NULL,
-        16,
+        13,
         ImplicitComponents_testcases
     },
     {
@@ -1051,7 +1001,7 @@ static bake_test_suite suites[] = {
         "World",
         NULL,
         NULL,
-        5,
+        4,
         World_testcases
     }
 };

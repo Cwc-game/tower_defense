@@ -232,7 +232,7 @@ void WorldFactory_module() {
 class MyNamedModule {
 public:
     MyNamedModule(flecs::world& ecs) {
-        ecs.module<MyNamedModule>("ModuleName");
+        ecs.module<MyModule>("ModuleName");
         ecs.component<Position>();
     }
 };

@@ -180,49 +180,26 @@ const char* ecs_name_from_symbol(
     return type_name;
 }
 
-void ecs_set_symbol(
+ecs_entity_t ecs_lookup_w_type(
     ecs_world_t *world,
-    ecs_entity_t e,
-    const char *name)
+    const char *name,
+    ecs_type_t type)
 {
-    const char *e_name = ecs_name_from_symbol(world, name);
-
-    ecs_set(world, e, EcsName, { 
-        .value = e_name, 
-        .symbol = name 
-    });
-}
-
-ecs_entity_t ecs_lookup_w_id(
-    ecs_world_t *world,
-    ecs_entity_t e,
-    const char *name)
-{
-    if (e) {
-        if (name) {
-            /* Make sure name is the same */
-            const char *existing = ecs_get_name(world, e);
-            if (existing && strcmp(existing, name)) {
-                ecs_abort(ECS_INCONSISTENT_NAME, name);
-            }
-            if (!existing) {
-                ecs_set_symbol(world, e, name);
-            }
-        }
+    if (!name) {
+        return 0;
     }
     
-    ecs_entity_t result = e;
-    if (!result) {
-        if (!name) {
-            /* If neither an id nor name is specified, return 0 */
-            return 0;
+    ecs_entity_t result = ecs_lookup(world, name);
+    if (result) {
+        ecs_type_t entity_type = ecs_get_type(world, result);
+        if (type && (!entity_type || !ecs_type_contains(world, entity_type, type, true, false))) {
+            ecs_abort(ECS_ALREADY_DEFINED, name);
         }
-
-        result = ecs_lookup(world, name);
     }
     
     return result;
 }
+
 
 /* -- Public functions -- */
 
@@ -240,14 +217,16 @@ ecs_entity_t ecs_new_entity(
     const char *name,
     const char *expr)
 {
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
-    if (!result) {
-        result = ecs_new(world, 0);
-        ecs_set_symbol(world, result, name);
-    }
-    
     EcsType type = type_from_expr(world, name, expr);
-    ecs_add_type(world, result, type.normalized);
+
+    const char *e_name = ecs_name_from_symbol(world, name);
+
+    ecs_entity_t result = ecs_lookup_w_type(world, name, type.normalized);
+    if (!result) {
+        result = e ? e : ecs_new(world, 0);
+        ecs_add_type(world, result, type.normalized);
+        ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+    }
 
     return result;
 }
@@ -258,16 +237,21 @@ ecs_entity_t ecs_new_prefab(
     const char *name,
     const char *expr)
 {
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
-    if (!result) {
-        result = ecs_new(world, 0);
-        ecs_set_symbol(world, result, name);
-    }
-
-    ecs_add_entity(world, result, EcsPrefab);
-
     EcsType type = type_from_expr(world, name, expr);
-    ecs_add_type(world, result, type.normalized);
+
+    const char *e_name = ecs_name_from_symbol(world, name);
+
+    ecs_entity_t result = ecs_lookup_w_type(world, name, type.normalized);
+    if (!result) {
+        result = e ? e : ecs_new(world, 0);
+        ecs_add_entity(world, result, EcsPrefab);
+        ecs_add_type(world, result, type.normalized);
+        ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+    } else {
+        if (!ecs_has_entity(world, result, EcsPrefab)) {
+            ecs_abort(ECS_ALREADY_DEFINED, name);
+        }
+    }
 
     return result;
 }
@@ -282,33 +266,36 @@ ecs_entity_t ecs_new_component(
     ecs_assert(world != NULL, ECS_INVALID_PARAMETER, NULL);
     assert(world->magic == ECS_WORLD_MAGIC);
 
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
-    if (!result) {
-        result = ecs_new_component_id(world);
-        ecs_set_symbol(world, result, name);
-    }
+    const char *e_name = ecs_name_from_symbol(world, name);
 
-    /* ecs_new_component_id does not add the scope, so add it explicitly */
-    ecs_entity_t scope = world->stage.scope;
-    if (scope) {
-        ecs_add_entity(world, result, ECS_CHILDOF | scope);
-    }
+    ecs_entity_t result = e ? e : ecs_lookup_w_type(world, e_name, ecs_type(EcsComponent));
+    if (!result || e) {
+        ecs_stage_t *stage = ecs_get_stage(&world);
+        result = e ? e : ecs_new_component_id(world);
 
-    bool added = false;
-    EcsComponent *ptr = ecs_get_mut(world, result, EcsComponent, &added);
-    if (added) {
-        ptr->size = ecs_from_size_t(size);
-        ptr->alignment = ecs_from_size_t(alignment);
+        ecs_set(world, result, EcsComponent, {
+            .size = ecs_from_size_t(size),
+            .alignment = ecs_from_size_t(alignment)
+        });
+
+        if (name) {
+            ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+        }
+
+        ecs_entity_t scope = stage->scope;
+        if (scope) {
+            ecs_add_entity(world, result, ECS_CHILDOF | scope);
+        }
     } else {
+        const EcsComponent *ptr = ecs_get(world, result, EcsComponent);
+        ecs_assert(ptr != NULL, ECS_INTERNAL_ERROR, name);
         if (ptr->size != ecs_from_size_t(size)) {
             ecs_abort(ECS_INVALID_COMPONENT_SIZE, name);
         }
         if (ptr->alignment != ecs_from_size_t(alignment)) {
             ecs_abort(ECS_INVALID_COMPONENT_SIZE, name);
-        }
+        }        
     }
-
-    ecs_modified(world, result, EcsComponent);
 
     if (e > world->stats.last_component_id && e < ECS_HI_COMPONENT_ID) {
         world->stats.last_component_id = e + 1;
@@ -323,32 +310,32 @@ ecs_entity_t ecs_new_type(
     const char *name,
     const char *expr)
 {
-    assert(world->magic == ECS_WORLD_MAGIC);
+    assert(world->magic == ECS_WORLD_MAGIC);  
+    EcsType type = type_from_expr(world, name, expr);
 
-    ecs_entity_t result = ecs_lookup_w_id(world, e, name);
-    if (!result) {
-        result = ecs_new_entity(world, 0, name, NULL);
-    }
+    const char *e_name = ecs_name_from_symbol(world, name);
     
-    EcsType type_parsed = type_from_expr(world, name, expr);
+    ecs_entity_t result = ecs_lookup_w_type(world, name, ecs_type(EcsType));
+    if (!result) {
+        result = e ? e : ecs_new(world, 0);
+        ecs_set(world, result, EcsName, {.value = e_name, .symbol = name});
+        ecs_set(world, result, EcsType, {
+            .type = type.type, .normalized = type.normalized
+        });        
 
-    bool added = false;
-    EcsType *type = ecs_get_mut(world, result, EcsType, &added);
-    if (added) {
-        type->type = type_parsed.type;
-        type->normalized = type_parsed.normalized;
+        /* This will allow the type to show up in debug tools */
+        ecs_map_set(world->type_handles, (uintptr_t)type.type, &result);
     } else {
-        if (type->type != type_parsed.type) {
+        const EcsType *ptr = ecs_get(world, result, EcsType);
+        ecs_assert(ptr != NULL, ECS_INTERNAL_ERROR, NULL);
+
+        if (ptr->type != type.type || 
+            ptr->normalized != type.normalized) 
+        {
             ecs_abort(ECS_ALREADY_DEFINED, name);
         }
-
-        if (type->normalized != type_parsed.normalized) {
-            ecs_abort(ECS_ALREADY_DEFINED, name);
-        }
-    }     
-
-    /* This will allow the type to show up in debug tools */
-    ecs_map_set(world->type_handles, (uintptr_t)type_parsed.type, &result);
+    }
 
     return result;
 }
+

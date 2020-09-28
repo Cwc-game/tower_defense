@@ -703,8 +703,8 @@ void ecs_table_clear_silent(
 }
 
 /* Delete all entities in table, invoke OnRemove handlers. This function is used
- * when an application invokes delete_w_filter. Use ecs_table_clear_silent, as 
- * the table may have to be deactivated with systems. */
+ * when an application invokes delete_w_filter. Use ecs_table_clear_silent, as the
+ * table may have to be deactivated with systems. */
 void ecs_table_clear(
     ecs_world_t *world,
     ecs_table_t *table)
@@ -1510,7 +1510,7 @@ void ecs_table_move(
                  * a component that has not been copied.
                  * Note that a component is never copied between different 
                  * tables when copying from stage to main stage. */
-                dtor_component(world, old_table->c_info[i_old],
+                dtor_component(world, old_table->c_info[i_new],
                     &old_columns[i_old], &src_entity, old_index, 1);
             }
         }

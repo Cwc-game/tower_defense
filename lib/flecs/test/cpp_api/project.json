@@ -48,13 +48,7 @@
                 "has_instanceof_indirect",
                 "null_string",
                 "set_name",
-                "change_name",
-                "delete",
-                "clear",
-                "foce_owned",
-                "force_owned_2",
-                "force_owned_nested",
-                "tag_has_size_zero"
+                "change_name"
             ]
         }, {
             "id": "Traits",
@@ -205,10 +199,7 @@
                 "system_optional",
                 "system_const",
                 "query",
-                "implicit_name",
-                "reinit",
-                "reinit_scoped",
-                "reinit_w_lifecycle"
+                "implicit_name"
             ]
         }, {
             "id": "Snapshot",
@@ -242,8 +233,7 @@
                 "multi_world_empty",
                 "multi_world_component",
                 "multi_world_component_namespace",
-                "type_id",
-                "different_comp_same_name"
+                "type_id"
             ]
         }]
     }
