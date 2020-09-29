@@ -62,9 +62,15 @@ typedef struct FlecsComponentsGeometry {
     ECS_DECLARE_COMPONENT(EcsLineWidth);
 } FlecsComponentsGeometry;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 FLECS_COMPONENTS_GEOMETRY_EXPORT
 void FlecsComponentsGeometryImport(
     ecs_world_t *world);
+#ifdef __cplusplus
+}
+#endif
 
 #define FlecsComponentsGeometryImportHandles(handles)\
     ECS_IMPORT_ENTITY(handles, EcsPoint);\

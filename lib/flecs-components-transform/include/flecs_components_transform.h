@@ -76,9 +76,16 @@ typedef struct FlecsComponentsTransform {
     ECS_DECLARE_COMPONENT(EcsProject3);
 } FlecsComponentsTransform;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 FLECS_COMPONENTS_TRANSFORM_EXPORT
 void FlecsComponentsTransformImport(
     ecs_world_t *world);
+#ifdef __cplusplus
+}
+#endif
+
 
 #define FlecsComponentsTransformImportHandles(handles)\
     ECS_IMPORT_COMPONENT(handles, EcsPosition2);\

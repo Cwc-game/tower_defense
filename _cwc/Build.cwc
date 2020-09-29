@@ -6,6 +6,7 @@
 -{vFlag}=
 -DUNICODE
 -Dflecs_systems_sokol_STATIC
+-Dflecs_components_transform_STATIC
 >
 -{pLib}=../lib/
 -{pExtLib}=../ExtLib/

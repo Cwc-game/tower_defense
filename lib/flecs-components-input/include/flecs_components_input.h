@@ -117,9 +117,15 @@ typedef struct FlecsComponentsInput {
     ECS_DECLARE_COMPONENT(EcsInput);
 } FlecsComponentsInput;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 FLECS_COMPONENTS_INPUT_EXPORT
 void FlecsComponentsInputImport(
     ecs_world_t *world);
+#ifdef __cplusplus
+}
+#endif
 
 #define FlecsComponentsInputImportHandles(handles)\
     ECS_IMPORT_COMPONENT(handles, EcsInput);\

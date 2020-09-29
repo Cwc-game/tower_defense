@@ -54,9 +54,16 @@ typedef struct FlecsComponentsGraphics {
     ECS_DECLARE_COMPONENT(EcsEmissive);
 } FlecsComponentsGraphics;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 FLECS_COMPONENTS_GRAPHICS_EXPORT
 void FlecsComponentsGraphicsImport(
     ecs_world_t *world);
+	
+#ifdef __cplusplus
+}
+#endif
 
 #define FlecsComponentsGraphicsImportHandles(handles)\
     ECS_IMPORT_COMPONENT(handles, EcsCamera);\

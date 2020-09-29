@@ -47,8 +47,16 @@ typedef struct FlecsComponentsPhysics {
     ECS_DECLARE_COMPONENT(EcsFriction);
 } FlecsComponentsPhysics;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void FlecsComponentsPhysicsImport(
     ecs_world_t *world);
+#ifdef __cplusplus
+}
+#endif	
+	
 
 #define FlecsComponentsPhysicsImportHandles(handles)\
     ECS_IMPORT_ENTITY(handles, EcsCollider);\

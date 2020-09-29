@@ -30,8 +30,14 @@ typedef struct FlecsComponentsGui {
     ECS_DECLARE_COMPONENT(EcsCanvas);
 } FlecsComponentsGui;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void FlecsComponentsGuiImport(
     ecs_world_t *world);
+#ifdef __cplusplus
+}
+#endif
 
 #define FlecsComponentsGuiImportHandles(handles)\
     ECS_IMPORT_COMPONENT(handles, EcsWindow);\
