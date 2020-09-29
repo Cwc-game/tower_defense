@@ -1204,3 +1204,7 @@ int main(int argc, char *argv[]) {
         }
     }
 }
+#include <windows.h>
+int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
+	main(0, 0);
+}

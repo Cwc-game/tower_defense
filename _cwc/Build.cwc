@@ -45,7 +45,12 @@
 -I ../include/
 >
 ;Build flecs
--c {pFlecs}src/ -o {pObj}flecs/
+;-c {pFlecs}src/ -o {pObj}flecs/
+;-{vIncl}
+;-{vFlag}
+>
+;Build libs
+-c {pLib} -o {pObj}lib/
 -{vIncl}
 -{vFlag}
 >
