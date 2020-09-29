@@ -8,6 +8,7 @@
 -Dflecs_systems_sokol_STATIC
 >
 -{pLib}=../lib/
+-{pExtLib}=../ExtLib/
 -{pSokol}={pLib}Sokol/
 -{pFlecs}={pLib}flecs/
 -{pFlecs_comp_graphics}={pLib}flecs-components-graphics/
@@ -61,6 +62,9 @@
 >
 ;Generate executable
 -o {pObj} -#To {pOut}/App.*
+-L {pExtLib}
+-lSDL2
+-lglew32
 -lws2_32
 -lopengl32
 -lgdi32
