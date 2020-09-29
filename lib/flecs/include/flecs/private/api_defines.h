@@ -39,8 +39,12 @@ extern "C" {
 //// Language support defines
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef FLECS_LEGACY
+#include <stdbool.h>
+#endif
+
 /* The API uses the native bool type in C++, or a custom one in C */
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
 #undef bool
 #undef true
 #undef false
@@ -112,7 +116,10 @@ typedef int32_t ecs_size_t;
 ////////////////////////////////////////////////////////////////////////////////
 
 #define ECS_ROLE_MASK ((ecs_entity_t)0xFF << 56)
-#define ECS_ENTITY_MASK ((ecs_entity_t)~ECS_ROLE_MASK)
+#define ECS_GENERATION_MASK ((ecs_entity_t)0xFFFF << 48)
+#define ECS_GENERATION_INC(entity) ((entity + ((uint64_t)1 << 48)) & ~((uint64_t)1 << 63))
+#define ECS_ENTITY_MASK ((ecs_entity_t)~ECS_GENERATION_MASK)
+#define ECS_COMPONENT_MASK ((ecs_entity_t)~ECS_ROLE_MASK)
 #define ECS_TYPE_ROLE_START ECS_CHILDOF
 #define ECS_HAS_ROLE(e, role) ((e & ECS_ROLE_MASK) == ECS_##role)
 

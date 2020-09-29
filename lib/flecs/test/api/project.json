@@ -14,6 +14,7 @@
     "test": {
         "testsuites": [{
             "id": "New",
+            "setup": true,
             "testcases": [
                 "empty",
                 "component",
@@ -93,6 +94,7 @@
             ]
         }, {
             "id": "Switch",
+            "setup": true,
             "testcases": [
                 "get_case_empty",
                 "get_case_no_switch",
@@ -144,10 +146,12 @@
                 "declare_2_world",
                 "declare_tag",
                 "declare_tag_w_entity",
-                "declare_entity"
+                "declare_entity",
+                "declare_type"
             ]
         }, {
             "id": "Hierarchies",
+            "setup": true,
             "testcases": [
                 "empty_scope",
                 "get_parent",
@@ -157,6 +161,7 @@
                 "tree_iter_empty",
                 "tree_iter_1_table",
                 "tree_iter_2_tables",
+                "tree_iter_w_filter",
                 "path_depth_0",
                 "path_depth_1",
                 "path_depth_2",
@@ -206,7 +211,17 @@
                 "add_path_existing_depth_0",
                 "add_path_existing_depth_1",
                 "add_path_existing_depth_2",                                
-                "new_w_child_in_root"
+                "new_w_child_in_root",
+                "delete_child",
+                "delete_2_children",
+                "delete_2_children_different_type",
+                "delete_tree_2_levels",
+                "delete_tree_3_levels",
+                "delete_tree_count_tables",
+                "delete_tree_staged",
+                "get_child_count",
+                "get_child_count_2_tables",
+                "get_child_count_no_children"
             ]
         }, {
             "id": "Add_bulk",
@@ -283,6 +298,7 @@
             ]
         }, {
             "id": "Get_component",
+            "setup": true,
             "testcases": [
                 "get_empty",
                 "get_1_from_1",
@@ -296,6 +312,7 @@
             ]
         }, {
             "id": "Reference",
+            "setup": true,
             "testcases": [
                 "get_ref",
                 "get_ref_after_add",
@@ -310,6 +327,7 @@
             ]
         }, {
             "id": "Delete",
+            "setup": true,
             "testcases": [
                 "delete_1",
                 "delete_1_again",
@@ -319,7 +337,16 @@
                 "delete_2nd_of_3",
                 "delete_2_of_3",
                 "delete_3_of_3",
-                "delete_w_on_remove"
+                "delete_w_on_remove",
+                "clear_1_component",
+                "clear_2_components",
+                "alive_after_delete",
+                "alive_after_clear",
+                "alive_after_staged_delete",
+                "alive_while_staged",
+                "alive_while_staged_w_delete",
+                "alive_while_staged_w_delete_recycled_id",
+                "alive_after_recycle"
             ]
         }, {
             "id": "Delete_w_filter",
@@ -359,20 +386,27 @@
             ]
         }, {
             "id": "Lookup",
+            "setup": true,
             "testcases": [
                 "lookup",
                 "lookup_component",
                 "lookup_not_found",
                 "lookup_child",
-                "lookup_in_progress",
-                "lookup_child_in_progress",
                 "lookup_w_null_name",
                 "get_name",
                 "get_name_no_name",
                 "get_name_from_empty",
                 "lookup_by_id",
+                "lookup_symbol_by_id",
+                "lookup_name_w_digit",
+                "lookup_symbol_w_digit",
+                "lookup_path_w_digit",
                 "set_name_of_existing",
-                "change_name_of_existing"
+                "change_name_of_existing",
+                "lookup_alias",
+                "lookup_scoped_alias",
+                "define_duplicate_alias",
+                "define_alias_in_scope"
             ]
         }, {
             "id": "Singleton",
@@ -405,6 +439,7 @@
             ]
         }, {
             "id": "ComponentLifecycle",
+            "setup": true,
             "testcases": [
                 "ctor_on_add",
                 "ctor_on_new",
@@ -414,7 +449,6 @@
                 "copy_on_override",
                 "copy_on_new_w_data",
                 "copy_on_clone",
-                "copy_on_stage",
                 "no_copy_on_move",
                 "ctor_on_bulk_add",
                 "dtor_on_bulk_remove",
@@ -443,10 +477,15 @@
                 "copy_on_override_trait",
                 "copy_on_override_trait_tag",
                 "copy_on_set_trait",
-                "copy_on_set_trait_tag"
+                "copy_on_set_trait_tag",
+                "prevent_lifecycle_overwrite",
+                "prevent_lifecycle_overwrite_null_callbacks",
+                "allow_lifecycle_overwrite_equal_callbacks",
+                "set_lifecycle_after_trigger"
             ]
         }, {
             "id": "Pipeline",
+            "setup": true,
             "testcases": [
                 "system_order_same_phase",
                 "system_order_same_phase_after_disable",
@@ -466,6 +505,7 @@
             ]
         }, {
             "id": "SystemMisc",
+            "setup": true,
             "testcases": [
                 "invalid_not_without_id",
                 "invalid_optional_without_id",
@@ -524,7 +564,22 @@
                 "two_named_columns_of_two",
                 "get_column_by_name",
                 "get_column_by_name_not_found",
-                "get_column_by_name_no_names"
+                "get_column_by_name_no_names",
+                "redeclare_system_same_expr",
+                "redeclare_system_null_expr",
+                "redeclare_system_0_expr",
+                "redeclare_system_different_expr",
+                "redeclare_system_null_and_expr",
+                "redeclare_system_expr_and_null",
+                "redeclare_system_expr_and_0",
+                "redeclare_system_0_and_expr",
+                "redeclare_system_0_and_null",
+                "redeclare_system_null_and_0",
+                "redeclare_system_explicit_id",
+                "redeclare_system_explicit_id_null_expr",
+                "redeclare_system_explicit_id_no_name",
+                "declare_different_id_same_name",
+                "declare_different_id_same_name_w_scope"
             ]
         }, {
             "id": "Sorting",
@@ -566,7 +621,12 @@
                 "query_single_trait",
                 "query_single_instanceof",
                 "query_single_childof",
-                "query_w_filter"
+                "query_w_filter",
+                "query_optional_owned",
+                "query_optional_shared",
+                "query_optional_shared_nested",
+                "query_optional_any",
+                "query_rematch_optional_after_add"
             ]
         }, {
             "id": "Traits",
@@ -579,8 +639,12 @@
                 "add_tag_trait_for_component",
                 "query_2_traits",
                 "query_2_traits_2_instances_per_type",
+                "query_trait_or_component",
+                "query_trait_or_trait",
+                "query_not_trait",
                 "override_trait",
                 "override_tag_trait",
+                "trait_w_component_query",
                 "trait_wildcard_system",
                 "trait_only_wildcard_system",
                 "trait_wildcard_on_set",
@@ -589,10 +653,13 @@
                 "on_remove_trait",
                 "on_remove_trait_tag",
                 "on_remove_trait_on_delete",
-                "on_remove_trait_tag_on_delete"
+                "on_remove_trait_tag_on_delete",
+                "trait_from_shared",
+                "simple_trait_syntax"
             ]
         }, {
             "id": "TriggerOnAdd",
+            "setup": true,
             "testcases": [
                 "new_match_1_of_1",
                 "new_match_1_of_2",
@@ -791,6 +858,7 @@
             ]
         }, {
             "id": "SystemCascade",
+            "setup": true,
             "testcases": [
                 "cascade_depth_1",
                 "cascade_depth_2",
@@ -799,6 +867,7 @@
             ]
         }, {
             "id": "SystemManual",
+            "setup": true,
             "testcases": [
                 "1_type_1_component",
                 "activate_status",
@@ -814,6 +883,7 @@
             ]
         }, {
             "id": "Prefab",
+            "setup": true,
             "testcases": [
                 "new_w_prefab",
                 "new_w_count_prefab",
@@ -842,10 +912,11 @@
                 "prefab_w_1_child",
                 "prefab_w_2_children",
                 "prefab_w_grandchild",
+                "prefab_tree_1_2_1",
                 "prefab_w_base_w_child",
                 "prefab_w_child_w_base",
                 "prefab_w_child_w_base_w_children",
-                "prefab_w_child_new_w_count",
+                "prefab_w_child_new_w_count",                
                 "prefab_auto_override_child_component",
                 "ignore_on_add",
                 "ignore_on_remove",
@@ -867,17 +938,22 @@
                 "match_base_after_add_in_prev_phase",
                 "override_watched_prefab",
                 "rematch_twice",
-                "inherit_in_system",
                 "add_to_empty_base_in_system",
                 "dont_inherit_disabled",
                 "clone_after_inherit_in_on_add",
                 "override_from_nested",
                 "create_multiple_nested_w_on_set",
                 "create_multiple_nested_w_on_set_in_progress",
-                "single_on_set_on_child_w_override"
+                "single_on_set_on_child_w_override",
+                "force_owned",
+                "force_owned_2",
+                "force_owned_nested",
+                "force_owned_type",
+                "force_owned_type_w_trait"
             ]
         }, {
             "id": "System_w_FromContainer",
+            "setup": true,
             "testcases": [
                 "1_column_from_container",
                 "2_column_1_from_container",
@@ -923,6 +999,7 @@
             ]
         }, {
             "id": "World",
+            "setup": true,
             "testcases": [
                 "progress_w_0",
                 "progress_w_t",
@@ -959,6 +1036,7 @@
             ]
         }, {
             "id": "Type",
+            "setup": true,
             "testcases": [
                 "type_of_1_tostr",
                 "type_of_2_tostr",
@@ -1051,6 +1129,7 @@
             ]
         }, {
             "id": "Run",
+            "setup": true,
             "testcases": [
                 "run",
                 "run_w_param",
@@ -1118,6 +1197,7 @@
             ]
         }, {
             "id": "SingleThreadStaging",
+            "setup": true,
             "testcases": [
                 "new_empty",
                 "new_w_component",
@@ -1178,7 +1258,21 @@
                 "get_mutable",
                 "get_mutable_from_main",
                 "get_mutable_w_add",
-                "on_add_after_new_type_in_progress"
+                "on_add_after_new_type_in_progress",
+                "defer_new",
+                "defer_add",
+                "defer_remove",
+                "defer_set",
+                "defer_delete",
+                "defer_twice",
+                "defer_twice_in_progress",
+                "run_w_defer",
+                "system_in_progress_w_defer",
+                "defer_get_mut_no_modify",
+                "defer_get_mut_w_modify",
+                "defer_modify",
+                "defer_set_trait",
+                "defer_clear"
             ]
         }, {
             "id": "MultiThreadStaging",
@@ -1279,6 +1373,7 @@
             ]
         }, {
             "id": "Modules",
+            "setup": true,
             "testcases": [
                 "simple_module",
                 "import_module_from_system",
@@ -1302,6 +1397,7 @@
             ]
         }, {
             "id": "Internals",
+            "setup": true,
             "testcases": [
                 "deactivate_table",
                 "activate_table",

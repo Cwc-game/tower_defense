@@ -577,6 +577,9 @@ Here, `ECS_CHILDOF` is the type flag. This is an overview of the different type 
 |------|-------------|
 | ECS_INSTANCEOF | The entity is a base |
 | ECS_CHILDOF | The entity is a parent |
+| ECS_SWITCH | The entity is a switch type |
+| ECS_CASE | The entity is a case belonging to a switch type |
+| ECS_OWNED | The entity is a component for which ownership is enforced |
 
 Entities with type flags can be dynamically added or removed:
 
@@ -1802,24 +1805,29 @@ ecs_entity_t instance = ecs_new_w_entity(world, ECS_INSTANCEOF | derived);
 ```
 
 ### Automatic overriding
-In some scenarios it is desirable that an entity is initialized with a specific set of values, yet does not share the components from the base entity. In this case the instance can override each component individually, but this can become hard to maintain as components are added or removed to the base. This can be achieved by combining instancing with types. Consider the following example:
+In some scenarios it is desirable that an entity is initialized with a specific set of values, yet does not share the components from the base entity. In this case the instance can override each component individually, but this can become hard to maintain as components are added or removed to the base. This can be achieved by marking components as owned. Consider the following example:
 
 ```c
 // Create a base. Simply creating an instance of base will share the component, but not override it.
 ecs_entity_t Base = ecs_set(world, 0, Position, {10, 20});
 
-// Give a name to the base entity, so we can use it in type expressions
-ecs_set(world, Base, EcsName, "Base");
-
-// Create a type expression that both adds the INSTANCEOF relationship as well as the Position component
-ECS_TYPE(world, BaseType, INSTANCEOF | Base, Position);
+// Mark as OWNED. This ensures that when base is instantiated, Position is overridden
+ecs_add_entity(world, world, Base, ECS_OWNED | ecs_entity(Position));
 
 // Create entity from BaseType. This adds the INSTANCEOF relationship in addition 
 // to overriding Position, effectively initializing the Position component for the instance.
-ecs_entity_t instance = ecs_new(world, BaseType);
+ecs_entity_t instance = ecs_new_w_entity(world, ECS_INSTANCEOF | Base);
 ```
 
-The combination of instancing, overriding and types that do both is one of the fastest and easiest ways to create an entity with a set of initialized components.
+The combination of instancing, overriding and OWNED is one of the fastest and easiest ways to create an entity with a set of initialized components. The OWNED relationship can also be specified inside type expressions. The following example is equivalent to the previous one:
+
+```c
+ECS_ENTITY(world, Base, Position, OWNED | Position);
+
+ecs_set(world, Base, Position, {10, 20});
+
+ecs_entity_t instance = ecs_new_w_entity(world, ECS_INSTANCEOF | Base);
+```
 
 ### Instance hierarchies
 If a base entity has children, instances of that base entity will, when the INSTANCEOF relationship is added, acquire the same set of children. Take this example:
@@ -2050,11 +2058,11 @@ To extract the component id from a trait, an application must get the lower 32 b
 ecs_entity_t comp = ecs_entity_t_lo(trait);
 ```
 
-To obtain the trait, the application first has to remove the `ECS_TRAIT` role, after which the upper 32 bits should be used. To remove the `ECS_TRAIT` role the application can apply the `ECS_ENTITY_MASK` mask with a bitwise AND, after which the trait component id can be obtained with `ecs_entity_t_hi`:
+To obtain the trait, the application first has to remove the `ECS_TRAIT` role, after which the upper 32 bits should be used. To remove the `ECS_TRAIT` role the application can apply the `ECS_COMPONENT_MASK` mask with a bitwise AND, after which the trait component id can be obtained with `ecs_entity_t_hi`:
 
 ```c
 // This extracts the id of Trait
-ecs_entity_t trait_comp = ecs_entity_t_hi(trait & ECS_ENTITY_MASK);
+ecs_entity_t trait_comp = ecs_entity_t_hi(trait & ECS_COMPONENT_MASK);
 ```
 
 ### Traits as entity relationships

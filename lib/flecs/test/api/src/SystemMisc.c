@@ -1,12 +1,16 @@
 #include <api.h>
 
+void SystemMisc_setup() {
+    ecs_tracing_enable(-3);
+}
+
+
 static
 void install_test_abort() {
     ecs_os_set_api_defaults();
     ecs_os_api_t os_api = ecs_os_api;
     os_api.abort_ = test_abort;
     ecs_os_set_api(&os_api);
-    ecs_tracing_enable(-2);
 }
 
 static
@@ -1042,11 +1046,11 @@ void SystemMisc_add_to_system_in_progress() {
 
     ecs_new(world, Position);
 
-    ecs_staging_begin(world);
+    ecs_defer_begin(world);
 
     ecs_add(world, Dummy, Tag);
 
-    ecs_staging_end(world, false);
+    ecs_defer_end(world);
 
     ecs_progress(world, 0);
     test_assert(dummy_invoked == true);
@@ -1067,11 +1071,11 @@ void SystemMisc_add_to_lazy_system_in_progress() {
 
     ecs_new(world, Position);
 
-    ecs_staging_begin(world);
+    ecs_defer_begin(world);
 
     ecs_add(world, Dummy, Tag);
 
-    ecs_staging_end(world, false);
+    ecs_defer_end(world);
 
     ECS_SYSTEM(world, Foo, EcsOnUpdate, [in] Position);
 
@@ -1245,6 +1249,248 @@ void SystemMisc_get_column_by_name_no_names() {
         int32_t v_i = ecs_column_index_from_name(&it, "v");
         test_assert(v_i == 0);
     }
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_same_expr() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);        
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_null_expr() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, NULL, Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, NULL, Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_0_expr() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "0", Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "0", Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_different_expr() {
+    install_test_abort();
+
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    test_expect_abort();
+
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position", Dummy);        
+}
+
+void SystemMisc_redeclare_system_null_and_expr() {
+    install_test_abort();
+
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    test_expect_abort();
+
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, NULL, Dummy); 
+}
+
+void SystemMisc_redeclare_system_expr_and_null() {
+    install_test_abort();
+
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    test_expect_abort();
+
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, NULL, Dummy); 
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+}
+
+void SystemMisc_redeclare_system_expr_and_0() {
+    install_test_abort();
+
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    test_expect_abort();
+
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "0", Dummy); 
+}
+
+void SystemMisc_redeclare_system_0_and_expr() {
+    install_test_abort();
+
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    test_expect_abort();
+
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "0", Dummy); 
+    ecs_new_system(world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+}
+
+void SystemMisc_redeclare_system_0_and_null() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "0", Dummy);
+    ecs_entity_t s2 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, NULL, Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_null_and_0() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, NULL, Dummy);
+    ecs_entity_t s2 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "0", Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_explicit_id() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, s1, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_explicit_id_null_expr() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, NULL, Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, s1, "Move", EcsOnUpdate, NULL, Dummy);
+
+    test_assert(s1 == s2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_redeclare_system_explicit_id_no_name() {
+    ecs_world_t *world = ecs_init();
+
+    ECS_COMPONENT(world, Position);
+    ECS_COMPONENT(world, Velocity);
+
+    ecs_entity_t s1 = ecs_new_system(
+        world, 0, "Move", EcsOnUpdate, "Position, Velocity", Dummy);
+
+    ecs_entity_t s2 = ecs_new_system(
+        world, s1, NULL, EcsOnUpdate, "Position, Velocity", Dummy);
+
+    test_assert(s1 == s2);
+    test_str(ecs_get_name(world, s1), "Move");
+
+    ecs_fini(world);
+}
+
+void SystemMisc_declare_different_id_same_name() {
+    ecs_world_t *world = ecs_init();
+
+    ecs_entity_t e_1 = ecs_new(world, 0);
+    ecs_entity_t e_2 = ecs_new(world, 0);
+
+    ecs_entity_t s_1 = ecs_new_system(world, e_1, "Move", EcsOnUpdate, "0", Dummy);
+    test_assert(e_1 == s_1);
+
+    ecs_entity_t s_2 = ecs_new_system(world, e_2, "Move", EcsOnUpdate, "0", Dummy);
+    test_assert(e_2 == s_2);
+
+    test_assert(e_1 != e_2);
+
+    ecs_fini(world);
+}
+
+void SystemMisc_declare_different_id_same_name_w_scope() {
+    ecs_world_t *world = ecs_init();
+
+    ecs_entity_t scope = ecs_new(world, 0);
+    ecs_set_scope(world, scope);
+
+    ecs_entity_t e_1 = ecs_new(world, 0);
+    ecs_entity_t e_2 = ecs_new(world, 0);
+
+    ecs_entity_t s_1 = ecs_new_system(world, e_1, "Move", EcsOnUpdate, "0", Dummy);
+    test_assert(e_1 == s_1);
+
+    ecs_entity_t s_2 = ecs_new_system(world, e_2, "Move", EcsOnUpdate, "0", Dummy);
+    test_assert(e_2 == s_2);
+
+    test_assert(e_1 != e_2);
 
     ecs_fini(world);
 }

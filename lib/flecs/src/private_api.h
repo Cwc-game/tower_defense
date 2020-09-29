@@ -38,7 +38,6 @@ ecs_type_t ecs_bootstrap_type(
  * when entities used in system expressions change their components. */
 void ecs_set_watch(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_entity_t entity);
 
 /* Does one of the entity containers has specified component */
@@ -51,13 +50,11 @@ ecs_entity_t ecs_find_in_type(
 /* Obtain entity info */
 bool ecs_get_info(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_entity_t entity,
     ecs_entity_info_t *info);
 
 void ecs_run_monitors(
     ecs_world_t *world, 
-    ecs_stage_t *stage, 
     ecs_table_t *dst_table,
     ecs_vector_t *v_dst_monitors, 
     int32_t dst_row, 
@@ -100,7 +97,7 @@ void ecs_component_monitor_register(
     ecs_entity_t component,
     ecs_query_t *query);
 
-bool ecs_defer_begin(
+bool ecs_defer_op_begin(
     ecs_world_t *world,
     ecs_stage_t *stage,
     ecs_op_kind_t op_kind,
@@ -109,7 +106,7 @@ bool ecs_defer_begin(
     const void *value,
     ecs_size_t size);
 
-void ecs_defer_end(
+void ecs_defer_flush(
     ecs_world_t *world,
     ecs_stage_t *stage);
 
@@ -149,6 +146,96 @@ void ecs_stage_merge(
     ecs_world_t *world,
     ecs_stage_t *stage);
 
+/* Post-frame merge actions */
+void ecs_stage_merge_post_frame(
+    ecs_world_t *world,
+    ecs_stage_t *stage);
+
+/* Begin defer for stage */
+void ecs_stage_defer_begin(
+    ecs_world_t *world,
+    ecs_stage_t *stage);
+
+void ecs_stage_defer_end(
+    ecs_world_t *world,
+    ecs_stage_t *stage);    
+
+/* Delete table from stage */
+void ecs_delete_table(
+    ecs_world_t *world,
+    ecs_table_t *table);
+
+////////////////////////////////////////////////////////////////////////////////
+//// Defer API
+////////////////////////////////////////////////////////////////////////////////
+
+bool ecs_defer_none(
+    ecs_world_t *world,
+    ecs_stage_t *stage);
+
+bool ecs_defer_modified(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity,
+    ecs_entity_t component);
+
+bool ecs_defer_new(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity,
+    ecs_entities_t *components);
+
+bool ecs_defer_clone(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity,
+    ecs_entity_t src,
+    bool clone_value);
+
+bool ecs_defer_bulk_new(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    int32_t count,
+    ecs_entities_t *components,
+    void **component_data,
+    const ecs_entity_t **ids_out);
+
+bool ecs_defer_delete(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity);
+
+bool ecs_defer_clear(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity);
+
+bool ecs_defer_add(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity,
+    ecs_entities_t *components);
+
+bool ecs_defer_remove(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_entity_t entity,
+    ecs_entities_t *components);
+
+bool ecs_defer_set(
+    ecs_world_t *world,
+    ecs_stage_t *stage,
+    ecs_op_kind_t op_kind,
+    ecs_entity_t entity,
+    ecs_entity_t component,
+    ecs_size_t size,
+    const void *value,
+    void **value_out,
+    bool *is_added);
+
+void ecs_defer_flush(
+    ecs_world_t *world,
+    ecs_stage_t *stage);
 
 ////////////////////////////////////////////////////////////////////////////////
 //// Type API
@@ -194,7 +281,6 @@ void ecs_get_column_info(
 
 void ecs_run_add_actions(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_table_t *table,
     ecs_data_t *data,
     int32_t row,
@@ -206,7 +292,6 @@ void ecs_run_add_actions(
 
 void ecs_run_remove_actions(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_table_t *table,
     ecs_data_t *data,
     int32_t row,
@@ -216,7 +301,6 @@ void ecs_run_remove_actions(
 
 void ecs_run_set_systems(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_entities_t *components,
     ecs_table_t *table,
     ecs_data_t *data,
@@ -231,8 +315,7 @@ void ecs_run_set_systems(
 
 /* Initialize root table */
 void ecs_init_root_table(
-    ecs_world_t *world,
-    ecs_stage_t *stage);
+    ecs_world_t *world);
 
 /* Unset components in table */
 void ecs_table_unset(
@@ -274,7 +357,6 @@ ecs_data_t* ecs_table_merge(
 
 void ecs_table_swap(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_table_t *table,
     ecs_data_t *data,
     int32_t row_1,
@@ -282,14 +364,12 @@ void ecs_table_swap(
 
 ecs_table_t *ecs_table_traverse_add(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_table_t *table,
     ecs_entities_t *to_add,
     ecs_entities_t *added);
 
 ecs_table_t *ecs_table_traverse_remove(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_table_t *table,
     ecs_entities_t *to_remove,
     ecs_entities_t *removed);    
@@ -331,7 +411,6 @@ ecs_query_t* ecs_query_new_w_sig(
 
 void ecs_query_set_iter(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_query_t *query,
     ecs_iter_t *it,
     int32_t table_index,
@@ -344,7 +423,6 @@ void ecs_query_rematch(
 
 void ecs_run_monitor(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_matched_query_t *monitor,
     ecs_entities_t *components,
     int32_t row,
@@ -403,7 +481,11 @@ int16_t ecs_to_i16(
 
 /* Convert 64 bit signed integer to 32 bit */
 int32_t ecs_to_i32(
-    int64_t v);    
+    int64_t v);  
+
+/* Convert 64 bit unsigned integer to 32 bit */
+uint32_t ecs_to_u32(
+    uint64_t v);        
 
 /* Convert signed integer to size_t */
 size_t ecs_to_size_t(
@@ -452,11 +534,17 @@ const char* ecs_name_from_symbol(
     ecs_world_t *world,
     const char *type_name); 
 
-/* Lookup an entity by name with a specific type */
-ecs_entity_t ecs_lookup_w_type(
+/* Lookup an entity by name with a specific id */
+ecs_entity_t ecs_lookup_w_id(
     ecs_world_t *world,
-    const char *name,
-    ecs_type_t type);      
+    ecs_entity_t e,
+    const char *name);
+
+/* Set entity name with symbol */
+void ecs_set_symbol(
+    ecs_world_t *world,
+    ecs_entity_t e,
+    const char *name);
 
 /* Utility that print a descriptive error string*/
 //void ecs_print_error_string(const char *error_description, const char* signature, const char* system_id, const char* component_id);

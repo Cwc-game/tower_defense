@@ -28,9 +28,11 @@ const void* get_shared_column(
 
 #ifndef NDEBUG
     if (size) {
+        ecs_entity_t component_id = ecs_component_id_from_id(
+            it->world, it->references[-table_column - 1].component);
+
         const EcsComponent *cdata = ecs_get(
-            it->world, it->references[-table_column - 1].component, 
-            EcsComponent);
+            it->world, component_id, EcsComponent);
 
         ecs_assert(cdata != NULL, ECS_INTERNAL_ERROR, NULL);
         ecs_assert(cdata->size == size, ECS_COLUMN_TYPE_MISMATCH, 
@@ -130,14 +132,17 @@ bool ecs_is_readonly(
     const ecs_iter_t *it,
     int32_t column)
 {
-    if (!ecs_is_owned(it, column)) {
-        return true;
-    }
-
     ecs_query_t *query = it->query;
     if (query) {
         ecs_sig_column_t *column_data = ecs_vector_get(
             it->query->sig.columns, ecs_sig_column_t, column - 1);
+                    
+        if (!ecs_is_owned(it, column) && 
+            column_data->from_kind != EcsFromEntity) 
+        {
+            return true;
+        }
+
         return column_data->inout_kind == EcsIn;
     } else {
         return true;

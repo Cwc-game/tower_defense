@@ -9,9 +9,12 @@
 #define TOK_OPTIONAL '?'
 #define TOK_ROLE '|'
 #define TOK_TRAIT '>'
+#define TOK_FOR "FOR"
 #define TOK_NAME_SEP '.'
 #define TOK_ANNOTATE_OPEN '['
 #define TOK_ANNOTATE_CLOSE ']'
+#define TOK_WILDCARD '*'
+#define TOK_SINGLETON '$'
 
 #define TOK_ANY "ANY"
 #define TOK_OWNED "OWNED"
@@ -78,7 +81,7 @@ bool valid_identifier_char(
     char ch)
 {
     if (ch && (isalpha(ch) || isdigit(ch) || ch == '_' || ch == '.' || 
-        ch == '$' || ch == '*')) 
+        ch == TOK_SINGLETON || ch == TOK_WILDCARD)) 
     {
         return true;
     }
@@ -153,6 +156,8 @@ ecs_entity_t parse_role(
         return ECS_SWITCH;
     } else if (!ecs_os_strcmp(token, TOK_ROLE_CASE)) {
         return ECS_CASE;
+    } else if (!ecs_os_strcmp(token, TOK_OWNED)) {
+        return ECS_OWNED;
     } else {
         ecs_parser_error(name, sig, column, "invalid role '%s'", token);
         return 0;
@@ -245,7 +250,7 @@ const char* parse_element(
     sig_element_t *elem_out)
 {
     const char *ptr = sig;
-    char token[ECS_MAX_TOKEN_SIZE];
+    char token[ECS_MAX_TOKEN_SIZE] = {0};
     sig_element_t elem = {
         .inout_kind = EcsInOut,
         .from_kind = EcsFromOwned,
@@ -286,6 +291,13 @@ const char* parse_element(
         if (ptr[0] == TOK_ROLE && ptr[1] != TOK_ROLE) {
             ptr ++;
             goto parse_role;
+        }
+
+        /* Is token a trait? (using shorthand notation) */
+        if (!ecs_os_strncmp(ptr, TOK_FOR, 3)) {
+            elem.role = ECS_TRAIT;
+            ptr += 3;
+            goto parse_trait;
         }
 
         /* If it is neither, the next token must be a component */
@@ -333,8 +345,16 @@ parse_source:
 
         /* Is the next token a role? */
         if (ptr[0] == TOK_ROLE && ptr[1] != TOK_ROLE) {
+            ptr++;
             goto parse_role;
         }
+
+        /* Is token a trait? (using shorthand notation) */
+        if (!ecs_os_strncmp(ptr, TOK_FOR, 3)) {
+            elem.role = ECS_TRAIT;
+            ptr += 3;
+            goto parse_trait;
+        }        
 
         /* If not, it's a component */
         goto parse_component;
@@ -619,6 +639,7 @@ int ecs_sig_add(
     /* If component has AND role, all components of specified type must match */
     if (ECS_HAS_ROLE(component, AND)) {
         elem = ecs_vector_add(&sig->columns, ecs_sig_column_t);
+        component &= ECS_ENTITY_MASK;
         const EcsType *type = ecs_get(world, component, EcsType);
         if (!type) {
             ecs_parser_error(sig->name, sig->expr, 0, 
@@ -636,6 +657,7 @@ int ecs_sig_add(
     /* If component has OR role, add type as OR column */
     if (ECS_HAS_ROLE(component, OR)) {
         elem = ecs_vector_add(&sig->columns, ecs_sig_column_t);
+        component &= ECS_ENTITY_MASK;
         const EcsType *type = ecs_get(world, component, EcsType);
         if (!type) {
             ecs_parser_error(sig->name, sig->expr, 0, 

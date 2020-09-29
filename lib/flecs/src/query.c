@@ -16,9 +16,9 @@ ecs_entity_t components_contains(
         ecs_entity_t entity = *c_ptr;
 
         if (ECS_HAS_ROLE(entity, CHILDOF)) {
-            entity &= ECS_ENTITY_MASK;
+            entity &= ECS_COMPONENT_MASK;
 
-            ecs_record_t *record = ecs_eis_get(&world->stage, entity);
+            ecs_record_t *record = ecs_eis_get(world, entity);
             ecs_assert(record != 0, ECS_INTERNAL_ERROR, NULL);
 
             if (record->table) {
@@ -45,7 +45,7 @@ ecs_entity_t get_entity_for_component(
     ecs_entity_t component)
 {
     if (entity) {
-        ecs_record_t *record = ecs_eis_get(&world->stage, entity);
+        ecs_record_t *record = ecs_eis_get(world, entity);
         ecs_assert(record != NULL, ECS_INTERNAL_ERROR, NULL);
         if (record->table) {
             type = record->table->type;
@@ -85,7 +85,7 @@ int32_t rank_by_depth(
 
     for (i = count - 1; i >= 0; i --) {
         if (ECS_HAS_ROLE(array[i], CHILDOF)) {
-            ecs_type_t c_type = ecs_get_type(world, array[i] & ECS_ENTITY_MASK);
+            ecs_type_t c_type = ecs_get_type(world, array[i] & ECS_COMPONENT_MASK);
             int32_t j, c_count = ecs_vector_count(c_type);
             ecs_entity_t *c_array = ecs_vector_first(c_type, ecs_entity_t);
 
@@ -225,7 +225,7 @@ void get_comp_and_src(
         if (op == EcsOperAnd || op == EcsOperNot || op == EcsOperOptional) {
             component = column->is.component;
         } else if (op == EcsOperAll) {
-            component = column->is.component & ECS_ENTITY_MASK;
+            component = column->is.component & ECS_COMPONENT_MASK;
         } else if (op == EcsOperOr) {
             component = ecs_type_contains(
                 world, table_type, column->is.type, 
@@ -336,12 +336,12 @@ int32_t get_component_index(
             /* If only the lo part of the trait identifier is set, interpret it
              * as the trait to match. This will match any instance of the trait
              * on the entity and in a signature looks like "TRAIT | MyTrait". */
-            if (!ecs_entity_t_hi(component & ECS_ENTITY_MASK)) {
+            if (!ecs_entity_t_hi(component & ECS_COMPONENT_MASK)) {
                 ecs_assert(trait_offsets != NULL, 
                     ECS_INTERNAL_ERROR, NULL);
 
                 /* Strip the TRAIT role */
-                component &= ECS_ENTITY_MASK;
+                component &= ECS_COMPONENT_MASK;
 
                 /* Get index of trait. Start looking from the last trait index
                  * as this may not be the first instance of the trait. */
@@ -375,7 +375,7 @@ int32_t get_component_index(
                     /* Get id for the trait to lookup by taking the trait from
                      * the high 32 bits, move it to the low 32 bits, and reapply
                      * the TRAIT mask. */
-                    component = ecs_entity_t_hi(component & ECS_ENTITY_MASK);
+                    component = ecs_entity_t_hi(component & ECS_COMPONENT_MASK);
 
                     /* If the low part of the identifier is the wildcard entity,
                      * this column is requesting the component to which the 
@@ -421,6 +421,7 @@ int32_t get_component_index(
             if (!ECS_HAS_ROLE(component, CASE) && 
                 !ECS_HAS_ROLE(component, SWITCH)) 
             {
+                component = ecs_component_id_from_id(world, component);
                 const EcsComponent *data = ecs_get(
                     world, component, EcsComponent);
 
@@ -429,7 +430,7 @@ int32_t get_component_index(
                 }
             }
         }
-        
+
         /* ecs_table_column_offset may return -1 if the component comes
          * from a prefab. If so, the component will be resolved as a
          * reference (see below) */           
@@ -439,9 +440,7 @@ int32_t get_component_index(
         result = 0;
     } else if (op == EcsOperOptional) {
         /* If table doesn't have the field, mark it as no data */
-        if (!ecs_type_has_entity(
-            world, table_type, component))
-        {
+        if (!ecs_type_has_entity(world, table_type, component)) {
             result = 0;
         }
     }
@@ -493,7 +492,7 @@ void add_ref(
             if (e) {
                 ecs_get_ref_w_entity(
                     world, ref, e, component);
-                ecs_set_watch(world, &world->stage, e);                     
+                ecs_set_watch(world, e);                     
             }
 
             query->flags |= EcsQueryHasRefs;
@@ -512,11 +511,11 @@ ecs_entity_t is_column_trait(
     if (from_kind == EcsFromOwned && oper_kind == EcsOperAnd) {
         ecs_entity_t c = column->is.component;
         if (ECS_HAS_ROLE(c, TRAIT)) {
-            if (!(ecs_entity_t_hi(c & ECS_ENTITY_MASK))) {
+            if (!(ecs_entity_t_hi(c & ECS_COMPONENT_MASK))) {
                 return c;
             } else
             if (ecs_entity_t_lo(c) == EcsWildcard) {
-                return ecs_entity_t_hi(c & ECS_ENTITY_MASK);
+                return ecs_entity_t_hi(c & ECS_COMPONENT_MASK);
             }
         }
     }
@@ -533,12 +532,12 @@ int32_t type_trait_count(
     ecs_entity_t *entities = ecs_vector_first(type, ecs_entity_t);
     int32_t result = 0;
 
-    trait &= ECS_ENTITY_MASK;
+    trait &= ECS_COMPONENT_MASK;
 
     for (i = 0; i < count; i ++) {
         ecs_entity_t e = entities[i];
         if (ECS_HAS_ROLE(e, TRAIT)) {
-            e &= ECS_ENTITY_MASK;
+            e &= ECS_COMPONENT_MASK;
             if (ecs_entity_t_hi(e) == trait) {
                 result ++;
             }
@@ -682,6 +681,16 @@ add_trait:
         if (!entity && from != EcsFromEmpty) {
             int32_t index = get_component_index(world, table, table_type, 
                 &component, c, op, trait_offsets, trait_cur + 1);
+
+            if (index == -1) {
+                if (from == EcsFromOwned && op == EcsOperOptional) {
+                    index = 0;
+                }
+            } else {
+                if (from == EcsFromShared && op == EcsOperOptional) {
+                    index = 0;
+                }
+            }
             
             table_data->columns[c] = index;
 
@@ -692,7 +701,7 @@ add_trait:
                 ecs_sparse_column_t *sc = ecs_vector_add(
                     &table_data->sparse_columns, ecs_sparse_column_t);
                 sc->signature_column_index = c;
-                sc->sw_case = component & ECS_ENTITY_MASK;
+                sc->sw_case = component & ECS_COMPONENT_MASK;
                 sc->sw_column = NULL;
             }
         }
@@ -910,11 +919,11 @@ void match_tables(
     ecs_world_t *world,
     ecs_query_t *query)
 {
-    int32_t i, count = ecs_sparse_count(world->stage.tables);
+    int32_t i, count = ecs_sparse_count(world->store.tables);
 
     for (i = 0; i < count; i ++) {
         ecs_table_t *table = ecs_sparse_get(
-            world->stage.tables, ecs_table_t, i);
+            world->store.tables, ecs_table_t, i);
 
         if (ecs_query_match(world, table, query, NULL)) {
             add_table(world, query, table);
@@ -1037,7 +1046,7 @@ repeat:
             return j;
         }
 
-        ecs_table_swap(world, &world->stage, table, data, i, j);
+        ecs_table_swap(world, table, data, i, j);
 
         if (p == i) {
             pivot = ELEM(ptr, elem_size, j);
@@ -1082,7 +1091,7 @@ void sort_table(
     int32_t column_index,
     ecs_compare_action_t compare)
 {
-    ecs_data_t *data = ecs_table_get_data(world, table);
+    ecs_data_t *data = ecs_table_get_data(table);
     if (!data || !data->entities) {
         /* Nothing to sort */
         return;
@@ -1139,7 +1148,6 @@ ecs_entity_t e_from_helper(
 
 static
 void build_sorted_table_range(
-    ecs_world_t *world,
     ecs_query_t *query,
     int32_t start,
     int32_t end)
@@ -1154,7 +1162,7 @@ void build_sorted_table_range(
     int i, to_sort = 0;
     for (i = start; i < end; i ++) {
         ecs_matched_table_t *table = &tables[i];
-        ecs_data_t *data = ecs_table_get_data(world, table->table);
+        ecs_data_t *data = ecs_table_get_data(table->table);
         if (!data || !data->entities || !ecs_table_count(table->table)) {
             continue;
         }
@@ -1232,7 +1240,6 @@ void build_sorted_table_range(
 
 static
 void build_sorted_tables(
-    ecs_world_t *world,
     ecs_query_t *query)
 {
     /* Clean previous sorted tables */
@@ -1248,7 +1255,7 @@ void build_sorted_tables(
         table = &tables[i];
         if (rank != table->rank) {
             if (start != i) {
-                build_sorted_table_range(world, query, start, i);
+                build_sorted_table_range(query, start, i);
                 start = i;
             }
             rank = table->rank;
@@ -1256,7 +1263,7 @@ void build_sorted_tables(
     }
 
     if (start != i) {
-        build_sorted_table_range(world, query, start, i);
+        build_sorted_table_range(query, start, i);
     }
 }
 
@@ -1371,7 +1378,7 @@ void sort_tables(
     }
 
     if (tables_sorted || query->match_count != query->prev_match_count) {
-        build_sorted_tables(world, query);
+        build_sorted_tables(query);
         query->match_count ++; /* Increase version if tables changed */
     }
 }
@@ -1487,6 +1494,10 @@ void process_signature(
             query->flags |= EcsQueryHasOutColumns;
         }
 
+        if (op == EcsOperOptional) {
+            query->flags |= EcsQueryHasOptional;
+        }        
+
         if (!(query->flags & EcsQueryMatchDisabled)) {
             if (op == EcsOperOr) {
                 /* If the signature explicitly indicates interest in EcsDisabled,
@@ -1536,7 +1547,7 @@ void process_signature(
 
         if (from == EcsFromEntity) {
             ecs_assert(column->source != 0, ECS_INTERNAL_ERROR, NULL);
-            ecs_set_watch(world, &world->stage, column->source);
+            ecs_set_watch(world, column->source);
         }
     }
 
@@ -1598,10 +1609,10 @@ void activate_table(
         int32_t dst_count = ecs_vector_count(dst_array);
         if (active) {
             if (dst_count == 1) {
-                ecs_system_activate(world, query->system, true);
+                ecs_system_activate(world, query->system, true, NULL);
             }
         } else if (src_count == 0) {
-            ecs_system_activate(world, query->system, false);
+            ecs_system_activate(world, query->system, false, NULL);
         }
     }
 #else
@@ -1742,6 +1753,13 @@ void rematch_table(
         } else if (query->cascade_by) {
             resolve_cascade_container(
                 world, query, match, table->type);
+
+        /* If query has optional columns, it is possible that a column that
+         * previously had data no longer has data, or vice versa. Do a full
+         * rematch to make sure data is consistent. */
+        } else if (query->flags & EcsQueryHasOptional) {
+            unmatch_table(world, query, table);
+            add_table(world, query, table);
         }
     } else {
         /* Table no longer matches, remove */
@@ -1773,7 +1791,7 @@ void rematch_tables(
             rematch_table(world, query, table);
         }        
     } else {
-        ecs_sparse_t *tables = world->stage.tables;
+        ecs_sparse_t *tables = world->store.tables;
         int32_t i, count = ecs_sparse_count(tables);
 
         for (i = 0; i < count; i ++) {
@@ -1999,7 +2017,6 @@ ecs_iter_t ecs_query_iter(
 
 void ecs_query_set_iter(
     ecs_world_t *world,
-    ecs_stage_t *stage,
     ecs_query_t *query,
     ecs_iter_t *it,
     int32_t table_index,
@@ -2011,7 +2028,7 @@ void ecs_query_set_iter(
     ecs_assert(table != NULL, ECS_INTERNAL_ERROR, NULL);
 
     ecs_table_t *world_table = table->table;
-    ecs_data_t *table_data = ecs_table_get_staged_data(world, stage, world_table);
+    ecs_data_t *table_data = ecs_table_get_data(world_table);
     ecs_assert(table_data != NULL, ECS_INTERNAL_ERROR, NULL);
     
     ecs_entity_t *entity_buffer = ecs_vector_first(table_data->entities, ecs_entity_t);  
@@ -2074,7 +2091,6 @@ int ecs_page_iter_next(
 
 static
 int find_smallest_column(
-    ecs_world_t *world,
     ecs_table_t *table,
     ecs_matched_table_t *matched_table,
     ecs_vector_t *sparse_columns)
@@ -2102,7 +2118,7 @@ int find_smallest_column(
             ecs_assert(table_column_index >= 1, ECS_INTERNAL_ERROR, NULL);
 
             /* Get the sparse column */
-            ecs_data_t *data = ecs_table_get_data(world, table);
+            ecs_data_t *data = ecs_table_get_data(table);
             sc = sparse_column->sw_column = 
                 &data->sw_columns[table_column_index - 1];
         }
@@ -2121,7 +2137,6 @@ int find_smallest_column(
 
 static
 int sparse_column_next(
-    ecs_world_t *world,
     ecs_table_t *table,
     ecs_matched_table_t *matched_table,
     ecs_vector_t *sparse_columns,
@@ -2133,7 +2148,7 @@ int sparse_column_next(
 
     if (!(sparse_smallest = iter->sparse_smallest)) {
         sparse_smallest = iter->sparse_smallest = find_smallest_column(
-            world, table, matched_table, sparse_columns);
+            table, matched_table, sparse_columns);
         first_iteration = true;
     }
 
@@ -2246,7 +2261,7 @@ bool ecs_query_next(
         
         if (world_table) {
             ecs_vector_t *sparse_columns = table->sparse_columns;
-            table_data = ecs_table_get_data(world, world_table);
+            table_data = ecs_table_get_data(world_table);
             ecs_assert(table_data != NULL, ECS_INTERNAL_ERROR, NULL);
             it->table_columns = table_data->columns;
             
@@ -2260,7 +2275,7 @@ bool ecs_query_next(
 
             if (cur.count) {
                 if (sparse_columns) {
-                    if (sparse_column_next(world, world_table, table, 
+                    if (sparse_column_next(world_table, table, 
                         sparse_columns, iter, &cur) == -1)
                     {
                         /* No more elements in sparse column */
@@ -2384,7 +2399,7 @@ void ecs_query_order_by(
     sort_tables(world, query);    
 
     if (!query->table_slices) {
-        build_sorted_tables(world, query);
+        build_sorted_tables(query);
     }
 }
 
@@ -2403,7 +2418,7 @@ void ecs_query_group_by(
 
     order_ranked_tables(world, query);
 
-    build_sorted_tables(world, query);
+    build_sorted_tables(query);
 }
 
 bool ecs_query_changed(

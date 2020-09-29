@@ -100,6 +100,46 @@ void ecs_component_monitor_free(
     }
 }
 
+static
+void init_store(ecs_world_t *world) {
+    ecs_os_memset(&world->store, 0, ECS_SIZEOF(ecs_store_t));
+    
+    /* Initialize entity index */
+    world->store.entity_index = ecs_sparse_new(ecs_record_t);
+    ecs_sparse_set_id_source(world->store.entity_index, &world->stats.last_id);
+
+    /* Initialize root table */
+    world->store.tables = ecs_sparse_new(ecs_table_t);
+
+    /* Initialize one root table per stage */
+    ecs_init_root_table(world);
+}
+
+static
+void clean_tables(
+    ecs_world_t *world)
+{
+    int32_t i, count = ecs_sparse_count(world->store.tables);
+
+    for (i = 0; i < count; i ++) {
+        ecs_table_t *t = ecs_sparse_get(world->store.tables, ecs_table_t, i);
+        ecs_table_free(world, t);
+    }
+
+    /* Clear the root table */
+    if (count) {
+        ecs_table_reset(world, &world->store.root);
+    }
+}
+
+static
+void fini_store(ecs_world_t *world) {
+    clean_tables(world);
+    ecs_sparse_free(world->store.tables);
+    ecs_table_free(world, &world->store.root);
+    ecs_sparse_free(world->store.entity_index);
+}
+
 /* -- Public functions -- */
 
 
@@ -150,8 +190,11 @@ ecs_world_t *ecs_mini(void) {
 
     world->magic = ECS_WORLD_MAGIC;
     memset(&world->c_info, 0, sizeof(ecs_c_info_t) * ECS_HI_COMPONENT_ID); 
+
     world->t_info = ecs_map_new(ecs_c_info_t, 0);  
     world->fini_actions = NULL; 
+
+    world->aliases = NULL;
 
     world->queries = ecs_vector_new(ecs_query_t*, 0);
     world->fini_tasks = ecs_vector_new(ecs_entity_t, 0);
@@ -201,6 +244,8 @@ ecs_world_t *ecs_mini(void) {
     world->stats.merge_count_total = 0;
     world->stats.systems_ran_frame = 0;
     world->stats.pipeline_build_count_total = 0;
+    
+    world->range_check_enabled = true;
 
     world->fps_sleep = 0;
 
@@ -211,6 +256,7 @@ ecs_world_t *ecs_mini(void) {
 
     ecs_stage_init(world, &world->stage);
     ecs_stage_init(world, &world->temp_stage);
+    init_store(world);
 
     world->stage.world = world;
     world->temp_stage.world = world;
@@ -304,7 +350,7 @@ void ecs_notify_tables(
     ecs_world_t *world,
     ecs_table_event_t *event)
 {
-    ecs_sparse_t *tables = world->stage.tables;
+    ecs_sparse_t *tables = world->store.tables;
     int32_t i, count = ecs_sparse_count(tables);
 
     for (i = 0; i < count; i ++) {
@@ -329,21 +375,44 @@ void ecs_set_component_actions_w_entity(
 #endif
 
     ecs_c_info_t *c_info = ecs_get_or_create_c_info(world, component);
-    c_info->component = component;
-    c_info->lifecycle = *lifecycle;
+    ecs_assert(c_info != NULL, ECS_INTERNAL_ERROR, NULL);
 
-    /* If no constructor is set, invoking any of the other lifecycle actions is
-     * not safe as they will potentially access uninitialized memory. For ease
-     * of use, if no constructor is specified, set a default one that 
-     * initializes the component to 0. */
-    if (!lifecycle->ctor) {
-        c_info->lifecycle.ctor = ctor_init_zero;   
+    if (c_info->lifecycle_set) {
+        ecs_assert(c_info->component == component, ECS_INTERNAL_ERROR, NULL);
+        ecs_assert(c_info->lifecycle.ctor == lifecycle->ctor, 
+            ECS_INCONSISTENT_COMPONENT_ACTION, NULL);
+        ecs_assert(c_info->lifecycle.dtor == lifecycle->dtor, 
+            ECS_INCONSISTENT_COMPONENT_ACTION, NULL);
+        ecs_assert(c_info->lifecycle.copy == lifecycle->copy, 
+            ECS_INCONSISTENT_COMPONENT_ACTION, NULL);
+        ecs_assert(c_info->lifecycle.move == lifecycle->move, 
+            ECS_INCONSISTENT_COMPONENT_ACTION, NULL);
+    } else {
+        c_info->component = component;
+        c_info->lifecycle = *lifecycle;
+        c_info->lifecycle_set = true;
+
+        /* If no constructor is set, invoking any of the other lifecycle actions 
+         * is not safe as they will potentially access uninitialized memory. For 
+         * ease of use, if no constructor is specified, set a default one that 
+         * initializes the component to 0. */
+        if (!lifecycle->ctor && (lifecycle->dtor || lifecycle->copy || lifecycle->move)) {
+            c_info->lifecycle.ctor = ctor_init_zero;   
+        }
+
+        ecs_notify_tables(world, &(ecs_table_event_t) {
+            .kind = EcsTableComponentInfo,
+            .component = component
+        });
     }
+}
 
-    ecs_notify_tables(world, &(ecs_table_event_t) {
-        .kind = EcsTableComponentInfo,
-        .component = component
-    });
+bool ecs_component_has_actions(
+    ecs_world_t *world,
+    ecs_entity_t component)
+{
+    ecs_c_info_t *c_info = ecs_get_c_info(world, component);
+    return (c_info != NULL) && c_info->lifecycle_set;
 }
 
 void ecs_atfini(
@@ -382,7 +451,7 @@ static
 void fini_unset_tables(
     ecs_world_t *world)
 {
-    ecs_sparse_each(world->stage.tables, ecs_table_t, table, {
+    ecs_sparse_each(world->store.tables, ecs_table_t, table, {
         ecs_table_unset(world, table);
     });
 }
@@ -462,6 +531,21 @@ void fini_child_tables(
     ecs_map_free(world->child_tables);
 }
 
+/* Cleanup aliases */
+static
+void fini_aliases(
+    ecs_world_t *world)
+{
+    int32_t i, count = ecs_vector_count(world->aliases);
+    ecs_alias_t *aliases = ecs_vector_first(world->aliases, ecs_alias_t);
+
+    for (i = 0; i < count; i ++) {
+        ecs_os_free(aliases[i].name);
+    }
+
+    ecs_vector_free(world->aliases);
+}
+
 /* Cleanup misc structures */
 static
 void fini_misc(
@@ -493,11 +577,15 @@ int ecs_fini(
 
     fini_stages(world);
 
+    fini_store(world);
+
     fini_component_lifecycle(world);
 
     fini_queries(world);
 
     fini_child_tables(world);
+
+    fini_aliases(world);
 
     fini_misc(world);
 
@@ -520,7 +608,7 @@ void ecs_dim(
     int32_t entity_count)
 {
     assert(world->magic == ECS_WORLD_MAGIC);
-    ecs_eis_set_size(&world->stage, entity_count + ECS_HI_COMPONENT_ID);
+    ecs_eis_set_size(world, entity_count + ECS_HI_COMPONENT_ID);
 }
 
 void ecs_dim_type(
@@ -530,11 +618,10 @@ void ecs_dim_type(
 {
     assert(world->magic == ECS_WORLD_MAGIC);
     if (type) {
-        ecs_table_t *table = ecs_table_from_type(
-            world, &world->stage, type);
+        ecs_table_t *table = ecs_table_from_type(world, type);
         ecs_assert(table != NULL, ECS_INTERNAL_ERROR, NULL);
         
-        ecs_data_t *data = ecs_table_get_or_create_data(world, &world->stage, table);
+        ecs_data_t *data = ecs_table_get_or_create_data(table);
         ecs_table_set_size(world, table, data, entity_count);
     }
 }
@@ -576,28 +663,6 @@ void ecs_merge(
     }
 
     world->stats.merge_count_total ++;
-
-    /* Execute post frame actions */
-    ecs_vector_each(world->stage.post_frame_actions, ecs_action_elem_t, action, {
-        action->action(world, action->ctx);
-    });
-
-    ecs_vector_free(world->stage.post_frame_actions);
-    world->stage.post_frame_actions = NULL;
-
-    ecs_vector_each(world->temp_stage.post_frame_actions, ecs_action_elem_t, action, {
-        action->action(world, action->ctx);
-    });
-    ecs_vector_free(world->temp_stage.post_frame_actions);
-    world->temp_stage.post_frame_actions = NULL;
-
-    ecs_vector_each(world->worker_stages, ecs_stage_t, stage, {
-        ecs_vector_each(stage->post_frame_actions, ecs_action_elem_t, action, {
-            action->action(world, action->ctx);
-        });
-        ecs_vector_free(stage->post_frame_actions);
-        stage->post_frame_actions = NULL;
-    });    
 }
 
 void ecs_set_automerge(
@@ -686,9 +751,8 @@ bool ecs_enable_range_check(
     ecs_world_t *world,
     bool enable)
 {
-    ecs_stage_t *stage = ecs_get_stage(&world);
-    bool old_value = stage->range_check_enabled;
-    stage->range_check_enabled = enable;
+    bool old_value = world->range_check_enabled;
+    world->range_check_enabled = enable;
     return old_value;
 }
 
@@ -771,7 +835,13 @@ ecs_c_info_t * ecs_get_c_info(
     ecs_assert(!(component & ECS_ROLE_MASK), ECS_INTERNAL_ERROR, NULL);
 
     if (component < ECS_HI_COMPONENT_ID) {
-        return &world->c_info[component];
+        ecs_c_info_t *c_info = &world->c_info[component];
+        if (c_info->component) {
+            ecs_assert(c_info->component == component, ECS_INTERNAL_ERROR, NULL);
+            return c_info;
+        } else {
+            return NULL;
+        }
     } else {
         return ecs_map_get(world->t_info, ecs_c_info_t, component);
     }
@@ -783,11 +853,16 @@ ecs_c_info_t * ecs_get_or_create_c_info(
 {    
     ecs_c_info_t *c_info = ecs_get_c_info(world, component);
     if (!c_info) {
-        ecs_assert(component >= ECS_HI_COMPONENT_ID, ECS_INTERNAL_ERROR, NULL);
-        ecs_c_info_t t_info = { 0 };
-        ecs_map_set(world->t_info, component, &t_info);
-        c_info = ecs_map_get(world->t_info, ecs_c_info_t, component);
-        ecs_assert(c_info != NULL, ECS_INTERNAL_ERROR, NULL);      
+        if (component < ECS_HI_COMPONENT_ID) {
+            c_info = &world->c_info[component];
+            ecs_assert(c_info->component == 0, ECS_INTERNAL_ERROR, NULL);
+            c_info->component = component;
+        } else {
+            ecs_c_info_t t_info = { 0 };
+            ecs_map_set(world->t_info, component, &t_info);
+            c_info = ecs_map_get(world->t_info, ecs_c_info_t, component);
+            ecs_assert(c_info != NULL, ECS_INTERNAL_ERROR, NULL); 
+        }
     }
 
     return c_info;
@@ -801,20 +876,194 @@ bool ecs_staging_begin(
     return in_progress;
 }
 
-bool ecs_staging_end(
-    ecs_world_t *world,
-    bool is_staged)
+void ecs_staging_end(
+    ecs_world_t *world)
 {
-    bool result = world->in_progress;
+    ecs_assert(world->in_progress == true, ECS_INVALID_OPERATION, NULL);
 
-    if (!is_staged) {
-        world->in_progress = false;
-        if (world->auto_merge) {
-            ecs_merge(world);
-        }
+    world->in_progress = false;
+    if (world->auto_merge) {
+        ecs_merge(world);
+    }
+}
+
+static
+double insert_sleep(
+    ecs_world_t *world,
+    ecs_time_t *stop)
+{
+    ecs_time_t start = *stop;
+    double delta_time = ecs_time_measure(stop);
+
+    if (world->stats.target_fps == 0) {
+        return delta_time;
     }
 
-    return result;
+    double target_delta_time = (1.0 / world->stats.target_fps);
+    double world_sleep_err = 
+        world->stats.sleep_err / (double)world->stats.frame_count_total;
+
+    /* Calculate the time we need to sleep by taking the measured delta from the
+     * previous frame, and subtracting it from target_delta_time. */
+    double sleep = target_delta_time - delta_time;
+
+    /* Pick a sleep interval that is 20 times lower than the time one frame
+     * should take. This means that this function at most iterates 20 times in
+     * a busy loop */
+    double sleep_time = target_delta_time / 20;
+
+    /* Measure at least two frames before interpreting sleep error */
+    if (world->stats.frame_count_total > 1) {
+        /* If the ratio between the sleep error and the sleep time is too high,
+         * just do a busy loop */
+        if (world_sleep_err / sleep_time > 0.1) {
+            sleep_time = 0;
+        } 
+    }
+
+    /* If the time we need to sleep is large enough to warrant a sleep, sleep */
+    if (sleep > (sleep_time - world_sleep_err)) {
+        if (sleep_time > sleep) {
+            /* Make sure we don't sleep longer than we should */
+            sleep_time = sleep;
+        }
+
+        double sleep_err = 0;
+        int32_t iterations = 0;
+
+        do {
+            /* Only call sleep when sleep_time is not 0. On some platforms, even
+             * a sleep with a timeout of 0 can cause stutter. */
+            if (sleep_time != 0) {
+                ecs_sleepf(sleep_time);
+            }
+
+            ecs_time_t now = start;
+            double prev_delta_time = delta_time;
+            delta_time = ecs_time_measure(&now);
+
+            /* Measure the error of the sleep by taking the difference between 
+             * the time we expected to sleep, and the measured time. This 
+             * assumes that a sleep is less accurate than a high resolution 
+             * timer which should be true in most cases. */
+            sleep_err = delta_time - prev_delta_time - sleep_time;
+            iterations ++;
+        } while ((target_delta_time - delta_time) > (sleep_time - world_sleep_err));
+
+        /* Add sleep error measurement to sleep error, with a bias towards the
+         * latest measured values. */
+        world->stats.sleep_err = (float)
+            (world_sleep_err * 0.9 + sleep_err * 0.1) * 
+                (float)world->stats.frame_count_total;
+    }
+
+    /*  Make last minute corrections if due to a larger clock error delta_time
+     * is still more than 5% away from the target. The 5% buffer is to account
+     * for the fact that measuring the time also takes time. */
+    while (delta_time < target_delta_time * 0.95) {
+        ecs_time_t now = start;
+        delta_time = ecs_time_measure(&now);
+    }
+
+    return delta_time;
+}
+
+static
+float start_measure_frame(
+    ecs_world_t *world,
+    float user_delta_time)
+{
+    double delta_time = 0;
+
+    if (world->measure_frame_time || (user_delta_time == 0)) {
+        ecs_time_t t = world->frame_start_time;
+        do {
+            if (world->frame_start_time.sec) {
+                delta_time = insert_sleep(world, &t);
+
+                ecs_time_measure(&t);
+            } else {
+                ecs_time_measure(&t);
+                if (world->stats.target_fps != 0) {
+                    delta_time = 1.0 / world->stats.target_fps;
+                } else {
+                    delta_time = 1.0 / 60.0; /* Best guess */
+                }
+            }
+        
+        /* Keep trying while delta_time is zero */
+        } while (delta_time == 0);
+
+        world->frame_start_time = t;  
+
+        /* Keep track of total time passed in world */
+        world->stats.world_time_total_raw += (float)delta_time;
+    }
+
+    return (float)delta_time;
+}
+
+static
+void stop_measure_frame(
+    ecs_world_t* world)
+{
+    if (world->measure_frame_time) {
+        ecs_time_t t = world->frame_start_time;
+        world->stats.frame_time_total += (float)ecs_time_measure(&t);
+    }
+}
+
+float ecs_frame_begin(
+    ecs_world_t *world,
+    float user_delta_time)
+{
+    ecs_assert(world->magic == ECS_WORLD_MAGIC, ECS_INVALID_FROM_WORKER, NULL);
+    ecs_assert(world->in_progress == false, ECS_INVALID_OPERATION, NULL);
+
+    ecs_assert(user_delta_time != 0 || ecs_os_has_time(), ECS_MISSING_OS_API, "get_time");
+
+    if (world->locking_enabled) {
+        ecs_lock(world);
+    }
+
+    /* Start measuring total frame time */
+    float delta_time = start_measure_frame(world, user_delta_time);
+    if (user_delta_time == 0) {
+        user_delta_time = delta_time;
+    }  
+
+    world->stats.delta_time_raw = user_delta_time;
+    world->stats.delta_time = user_delta_time * world->stats.time_scale;
+
+    /* Keep track of total scaled time passed in world */
+    world->stats.world_time_total += world->stats.delta_time;
+
+    return user_delta_time;
+}
+
+void ecs_frame_end(
+    ecs_world_t *world)
+{
+    ecs_assert(world->magic == ECS_WORLD_MAGIC, ECS_INVALID_FROM_WORKER, NULL);
+    ecs_assert(world->in_progress == false, ECS_INVALID_OPERATION, NULL);
+
+    world->stats.frame_count_total ++;   
+
+    ecs_stage_merge_post_frame(world, &world->temp_stage);
+
+    ecs_vector_each(world->worker_stages, ecs_stage_t, stage, {
+        ecs_stage_merge_post_frame(world, stage);
+    });        
+
+    if (world->locking_enabled) {
+        ecs_unlock(world);
+
+        ecs_os_mutex_lock(world->thr_sync);
+        ecs_os_cond_broadcast(world->thr_cond);
+        ecs_os_mutex_unlock(world->thr_sync);
+    }
+
+    stop_measure_frame(world);
 }
 
 const ecs_world_info_t* ecs_get_world_info(
@@ -833,4 +1082,22 @@ void ecs_notify_queries(
     for (i = 0; i < count; i ++) {
         ecs_query_notify(world, queries[i], event);
     }    
+}
+
+void ecs_delete_table(
+    ecs_world_t *world,
+    ecs_table_t *table)
+{
+    /* Notify queries that table is to be removed */
+    ecs_notify_queries(
+        world, &(ecs_query_event_t){
+            .kind = EcsQueryTableUnmatch,
+            .table = table
+        });
+
+    /* Free resources associated with table */
+    ecs_table_free(world, table);
+
+    /* Remove table from sparse set */
+    ecs_sparse_remove(world->store.tables, table->id);
 }

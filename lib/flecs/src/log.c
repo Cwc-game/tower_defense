@@ -203,11 +203,11 @@ void ecs_log_print(
         ecs_os_log("%sinfo%s: %s%s%s%s",
             ECS_MAGENTA, ECS_NORMAL, ECS_GREY, indent, ECS_NORMAL, color_msg);
     } else if (level == -2) {
-        ecs_os_warn("%sinfo%s: %s%s%s%s",
-            ECS_MAGENTA, ECS_NORMAL, ECS_GREY, indent, ECS_NORMAL, color_msg);
+        ecs_os_warn("%swarn%s: %s%s%s%s",
+            ECS_YELLOW, ECS_NORMAL, ECS_GREY, indent, ECS_NORMAL, color_msg);
     } else if (level <= -2) {
-        ecs_os_err("%sinfo%s: %s%s%s%s",
-            ECS_MAGENTA, ECS_NORMAL, ECS_GREY, indent, ECS_NORMAL, color_msg);
+        ecs_os_err("%serr %s: %s%s%s%s",
+            ECS_RED, ECS_NORMAL, ECS_GREY, indent, ECS_NORMAL, color_msg);
     }
 
     ecs_os_free(color_msg);
@@ -272,7 +272,7 @@ void _ecs_parser_error(
     const char *fmt,
     ...)
 {
-    if (trace_level != -2) {
+    if (trace_level >= -2) {
         va_list valist;
         va_start(valist, fmt);
         char *msg = ecs_vasprintf(fmt, valist);
@@ -409,15 +409,23 @@ const char* ecs_strerror(
     case ECS_INVALID_REACTIVE_SIGNATURE:
         return "signature is not valid for reactive system (must contain at least one ANY column)";
     case ECS_INCONSISTENT_COMPONENT_NAME:
-        return "component registered twice with a different name";
+        return "component redefined with a different name";
     case ECS_TYPE_CONSTRAINT_VIOLATION:
         return "type constraint violated";
     case ECS_COMPONENT_NOT_REGISTERED:
         return "component is not registered";
     case ECS_INCONSISTENT_COMPONENT_ID:
-        return "component registered twice with a different id";        
+        return "component redefined with a different id";
     case ECS_INVALID_CASE:
         return "case not supported for type";
+    case ECS_COMPONENT_NAME_IN_USE:
+        return "component name is already in use";
+    case ECS_INCONSISTENT_NAME:
+        return "entity redefined with different name";
+    case ECS_INCONSISTENT_COMPONENT_ACTION:
+        return "registered mismatching component action";
+    case ECS_INVALID_OPERATION:
+        return "invalid operation";
     }
 
     return "unknown error code";

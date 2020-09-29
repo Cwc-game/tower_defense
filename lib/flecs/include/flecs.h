@@ -89,10 +89,10 @@ typedef struct ecs_world_info_t {
     ecs_entity_t min_id;              /**< First allowed entity id */
     ecs_entity_t max_id;              /**< Last allowed entity id */
 
-    float delta_time_raw;       /**< Raw delta time (no time scaling) */
-    float delta_time;           /**< Time passed to or computed by ecs_progress */
-    float time_scale;           /**< Time scale applied to delta_time */
-    float target_fps;           /**< Target fps */
+    float delta_time_raw;      /**< Raw delta time (no time scaling) */
+    float delta_time;          /**< Time passed to or computed by ecs_progress */
+    float time_scale;          /**< Time scale applied to delta_time */
+    float target_fps;          /**< Target fps */
     float frame_time_total;    /**< Total time spent processing a frame */
     float system_time_total;   /**< Total time spent in systems */
     float merge_time_total;    /**< Total time spent in merges */
@@ -216,24 +216,27 @@ typedef struct EcsTrigger {
  * ECS_TYPE(world, InstanceOfBase, INSTANCEOF | Base);
  */
 
+/** Role bit added to roles to differentiate between roles and generations */
+#define ECS_ROLE ((uint64_t)1 << 63)
+
 /** The INSTANCEOF role indicates that the components from the entity should be
  * shared with the entity that instantiates the type. */
-#define ECS_INSTANCEOF ((ecs_entity_t)0xFE << 56)
+#define ECS_INSTANCEOF (ECS_ROLE | ((ecs_entity_t)0x7E << 56))
 
 /** The CHILDOF role indicates that the entity should be treated as a parent of
  * the entity that instantiates the type. */
-#define ECS_CHILDOF ((ecs_entity_t)0xFD << 56)
+#define ECS_CHILDOF (ECS_ROLE | ((ecs_entity_t)0x7D << 56))
 
 /** The TRAIT role indicates that the entity is a trait identifier. */
-#define ECS_TRAIT ((ecs_entity_t)0xFC << 56)
+#define ECS_TRAIT (ECS_ROLE | ((ecs_entity_t)0x7C << 56))
 
 /** Enforce that all entities of a type are present in the type.
  * This flag can only be used in combination with an entity that has EcsType. */
-#define ECS_AND ((ecs_entity_t)0xFB << 56)
+#define ECS_AND (ECS_ROLE | ((ecs_entity_t)0x7B << 56))
 
 /** Enforce that at least one entity of a type must be present in the type.
  * This flag can only be used in combination with an entity that has EcsType. */
-#define ECS_OR ((ecs_entity_t)0xFA << 56)
+#define ECS_OR (ECS_ROLE | ((ecs_entity_t)0x7A << 56))
 
 /** Enforce that exactly one entity of a type must be present in the type.
  * This flag can only be used in combination with an entity that has EcsType. 
@@ -241,17 +244,20 @@ typedef struct EcsTrigger {
  * previous entity is removed from the entity. This makes XOR useful for
  * implementing state machines, as it allows for traversing states while 
  * ensuring that only one state is ever active at the same time. */
-#define ECS_XOR ((ecs_entity_t)0xF9 << 56)
+#define ECS_XOR (ECS_ROLE | ((ecs_entity_t)0x79 << 56))
 
 /** None of the entities in a type may be added to the type.
  * This flag can only be used in combination with an entity that has EcsType. */
-#define ECS_NOT ((ecs_entity_t)0xF8 << 56)
+#define ECS_NOT (ECS_ROLE | ((ecs_entity_t)0x78 << 56))
 
 /** Cases are used to switch between mutually exclusive components */
-#define ECS_CASE ((ecs_entity_t)0xF7 << 56)
+#define ECS_CASE (ECS_ROLE | ((ecs_entity_t)0x77 << 56))
 
 /** Switches allow for fast switching between mutually exclusive components */
-#define ECS_SWITCH ((ecs_entity_t)0xF6 << 56)
+#define ECS_SWITCH (ECS_ROLE | ((ecs_entity_t)0x76 << 56))
+
+/** Enforce ownership of a component */
+#define ECS_OWNED (ECS_ROLE | ((ecs_entity_t)0x75 << 56))
 
 /** @} */
 
@@ -418,12 +424,12 @@ typedef struct EcsTrigger {
     ECS_VECTOR_STACK(FLECS__T##id, ecs_entity_t, &id, 1);\
     (void)ecs_type(id)
 
-/** Declare an extern component variable.
- * Use this macro in a header when defining a component identifier globally.
- * Must be used together with ECS_COMPONENT_DECLARE.
+/** Declare an extern tag variable.
+ * Use this macro in a header when defining a tag identifier globally.
+ * Must be used together with ECS_TAG_DECLARE.
  *
  * Example:
- *   ECS_COMPONENT_EXTERN(Position);
+ *   ECS_TAG_EXTERN(Enemy);
  */
 #define ECS_TAG_EXTERN(id)\
     extern ecs_entity_t id;\
@@ -434,18 +440,18 @@ typedef struct EcsTrigger {
  * Must be used together with ECS_TAG_DEFINE.
  *
  * Example:
- *   ECS_TAG_DECLARE(Position);
+ *   ECS_TAG_DECLARE(Enemy);
  */
 #define ECS_TAG_DECLARE(id)\
     ecs_entity_t id;\
     ecs_type_t ecs_type(id)
 
-/** Define a component, store in variable outside of the current scope.
- * Use this macro in a header when defining a component identifier globally.
- * Must be used together with ECS_CTAG_DECLARE.
+/** Define a tag, store in variable outside of the current scope.
+ * Use this macro in a header when defining a tag identifier globally.
+ * Must be used together with ECS_TAG_DECLARE.
  *
  * Example:
- *   ECS_TAG_DEFINE(world, Position);
+ *   ECS_TAG_DEFINE(world, Enemy);
  */
 #define ECS_TAG_DEFINE(world, id)\
     id = ecs_new_entity(world, id, #id, 0);\
@@ -460,6 +466,39 @@ typedef struct EcsTrigger {
     ECS_TYPE_VAR(id) = ecs_type_from_entity(world, id);\
     (void)id;\
     (void)ecs_type(id)
+
+/** Declare an extern type variable.
+ * Use this macro in a header when defining a type globally.
+ * Must be used together with ECS_TYPE_DECLARE.
+ *
+ * Example:
+ *   ECS_TYPE_EXTERN(Movable);
+ */
+#define ECS_TYPE_EXTERN(id)\
+    extern ecs_entity_t id;\
+    extern ecs_type_t ecs_type(id)
+
+/** Declare a type variable outside the scope of a function.
+ * Use this macro in a header when defining a type globally.
+ * Must be used together with ECS_TYPE_DEFINE.
+ *
+ * Example:
+ *   ECS_TYPE_DECLARE(Movable);
+ */
+#define ECS_TYPE_DECLARE(id)\
+    ecs_entity_t id;\
+    ecs_type_t ecs_type(id)
+
+/** Define a type, store in variable outside of the current scope.
+ * Use this macro in a header when defining a type globally.
+ * Must be used together with ECS_TYPE_DECLARE.
+ *
+ * Example:
+ *   ECS_TYPE_DEFINE(world, Movable, Position, Velocity);
+ */
+#define ECS_TYPE_DEFINE(world, id, ...)\
+    id = ecs_new_type(world, 0, #id, #__VA_ARGS__);\
+    ecs_type(id) = ecs_type_from_entity(world, id);\
 
 /** Declare a constructor.
  * Example:
@@ -1184,9 +1223,22 @@ ecs_entity_t ecs_get_case(
 /** @} */
 
 /**
- * @defgroup deleting Deleting Entities
+ * @defgroup deleting Deleting Entities and components
  * @{
  */
+
+/** Clear all components.
+ * This operation will clear all components from an entity but will not delete
+ * the entity itself. This effectively prevents the entity id from being 
+ * recycled.
+ *
+ * @param world The world.
+ * @param entity The entity.
+ */
+FLECS_EXPORT
+void ecs_clear(
+    ecs_world_t *world,
+    ecs_entity_t entity);
 
 /** Delete an entity.
  * This operation will delete an entity and all of its components. The entity id
@@ -1201,6 +1253,19 @@ FLECS_EXPORT
 void ecs_delete(
     ecs_world_t *world,
     ecs_entity_t entity);
+
+
+/** Delete children of an entity.
+ * This operation deletes all children of a parent entity. If a parent has no
+ * children this operation has no effect.
+ *
+ * @param world The world.
+ * @param parent The parent entity.
+ */
+FLECS_EXPORT
+void ecs_delete_children(
+    ecs_world_t *world,
+    ecs_entity_t parent);
 
 /** @} */
 
@@ -1383,6 +1448,7 @@ ecs_entity_t ecs_set_ptr_w_entity(
  */
 #define ecs_set(world, entity, component, ...)\
     ecs_set_ptr_w_entity(world, entity, ecs_entity(component), sizeof(component), &(component)__VA_ARGS__)
+
 #endif
 
 
@@ -1468,6 +1534,17 @@ bool ecs_has_type(
  * @defgroup metadata Entity Metadata
  * @{
  */
+
+/** Test whether an entity is alive.
+ *
+ * @param world The world.
+ * @param e The entity.
+ * @return True if the entity is alive, false if the entity is not alive.
+ */
+FLECS_EXPORT
+bool ecs_is_alive(
+    ecs_world_t *world,
+    ecs_entity_t e);
 
 /** Get the type of an entity.
  *
@@ -1706,6 +1783,12 @@ ecs_entity_t ecs_lookup_symbol(
     ecs_world_t *world,
     const char *name);
 
+/* Add alias for entity to global scope */
+FLECS_EXPORT
+void ecs_use(
+    ecs_world_t *world,
+    ecs_entity_t entity,
+    const char *name);
 
 /** @} */
 
@@ -2478,6 +2561,17 @@ int32_t ecs_table_component_index(
  * @{
  */
 
+/** Begin frame. */
+FLECS_EXPORT
+float ecs_frame_begin(
+    ecs_world_t *world,
+    float delta_time);
+
+/** End frame. */
+FLECS_EXPORT
+void ecs_frame_end(
+    ecs_world_t *world);
+
 /** Begin staging.
  * When staging is enabled, modifications to entities are stored to a stage.
  * This ensures that arrays are not modified while iterating. Modifications are
@@ -2495,12 +2589,10 @@ bool ecs_staging_begin(
  * stage.
  *
  * @param world The world
- * @return Whether world was staged.
  */
 FLECS_EXPORT
-bool ecs_staging_end(
-    ecs_world_t *world,
-    bool is_staged);
+void ecs_staging_end(
+    ecs_world_t *world);
 
 /** Manually merge.
  * When automerging is set to false, an application can invoke this operation to
@@ -2510,6 +2602,25 @@ bool ecs_staging_end(
  */
 FLECS_EXPORT
 void ecs_merge(
+    ecs_world_t *world);
+
+/** Defer operations until end of frame. 
+ * When this operation is invoked while iterating, operations inbetween the
+ * defer_begin and defer_end operations are executed at the end of the frame.
+ *
+ * This operation is thread safe.
+ */
+FLECS_EXPORT
+void ecs_defer_begin(
+    ecs_world_t *world);
+
+/** End block of operations to defer. 
+ * See defer_begin.
+ *
+ * This operation is thread safe.
+ */
+FLECS_EXPORT
+void ecs_defer_end(
     ecs_world_t *world);
 
 /** Enable / disable automerging.
