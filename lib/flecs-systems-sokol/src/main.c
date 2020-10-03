@@ -387,56 +387,74 @@ void init_materials(
 static
 void SokolSetCanvas(ecs_iter_t *it) {
     ecs_world_t *world = it->world;
+
+	
     Sdl2Window *window = ecs_column(it, Sdl2Window, 1);
     EcsCanvas *canvas = ecs_column(it, EcsCanvas, 2);
     ecs_entity_t ecs_entity(SokolCanvas) = ecs_column_entity(it, 3);
     ecs_entity_t ecs_entity(SokolBuffer) = ecs_column_entity(it, 4);
     ecs_entity_t ecs_entity(SokolMaterial) = ecs_column_entity(it, 5);
 
-    for (int32_t i = 0; i < it->count; i ++) {
-        int w, h;
-        SDL_Window *sdl_window = window->window;
-        SDL_GLContext ctx = SDL_GL_CreateContext(sdl_window);
-        SDL_GL_GetDrawableSize(sdl_window, &w, &h);
+for (int32_t i = 0; i < it->count; i ++) {
 
-        sg_setup(&(sg_desc) {0});
-        assert(sg_isvalid());
-        ecs_trace_1("sokol initialized");
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); 
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1); 
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32); 
 
-        sg_image offscreen_tex = init_render_target(w, h);
-        sg_image offscreen_depth_tex = init_render_depth_target(w, h);
+		int w, h;
+		SDL_Window *sdl_window = window->window;
+		SDL_GLContext ctx = SDL_GL_CreateContext(sdl_window);
+			
+	SDL_GL_MakeCurrent(window, ctx);
+	glewExperimental = GL_TRUE; 
+	GLenum err = glewInit();
+	if (GLEW_OK != err){
+		
+		SDL_GL_GetDrawableSize(sdl_window, &w, &h);
 
-        ecs_set(world, it->entities[i], SokolCanvas, {
-            .sdl_window = sdl_window,
-            .gl_context = ctx,
-            .pass_action = init_pass_action(&canvas[i]),
-            .tex_pass_action = init_tex_pass_action(),
-            .pip = init_pipeline(),
-            .tex_pip = init_tex_pipeline(),
-            .offscreen_tex = offscreen_tex,
-            .offscreen_depth_tex = offscreen_depth_tex,
-            .offscreen_pass = init_offscreen_pass(offscreen_tex, offscreen_depth_tex),
-            .offscreen_quad = init_quad(),
-            .fx_bloom = sokol_init_bloom(w, h)
-        });
+		sg_setup(&(sg_desc) {0});
+			assert(sg_isvalid());
+			ecs_trace_1("sokol initialized");
 
-        ecs_trace_1("sokol canvas initialized");
+			sg_image offscreen_tex = init_render_target(w, h);
+			sg_image offscreen_depth_tex = init_render_depth_target(w, h);
 
-        ecs_set_trait(world, it->entities[i], SokolBuffer, EcsQuery, {
-            ecs_query_new(world, "[in] flecs.systems.sokol.Buffer")
-        });
+			ecs_set(world, it->entities[i], SokolCanvas, {
+				.sdl_window = sdl_window,
+				.gl_context = ctx,
+				.pass_action = init_pass_action(&canvas[i]),
+				.tex_pass_action = init_tex_pass_action(),
+				.pip = init_pipeline(),
+				.tex_pip = init_tex_pipeline(),
+				.offscreen_tex = offscreen_tex,
+				.offscreen_depth_tex = offscreen_depth_tex,
+				.offscreen_pass = init_offscreen_pass(offscreen_tex, offscreen_depth_tex),
+				.offscreen_quad = init_quad(),
+				.fx_bloom = sokol_init_bloom(w, h)
+			});
 
-        ecs_set_trait(world, it->entities[i], SokolMaterial, EcsQuery, {
-            ecs_query_new(world, 
-                "[in] flecs.systems.sokol.Material,"
-                "[in] ?flecs.components.graphics.Specular,"
-                "[in] ?flecs.components.graphics.Emissive,"
-                "     ?Prefab")
-        });
+			ecs_trace_1("sokol canvas initialized");
 
-        sokol_init_buffers(world);
+			ecs_set_trait(world, it->entities[i], SokolBuffer, EcsQuery, {
+				ecs_query_new(world, "[in] flecs.systems.sokol.Buffer")
+			});
 
-        ecs_trace_1("sokol buffer support initialized");
+			ecs_set_trait(world, it->entities[i], SokolMaterial, EcsQuery, {
+				ecs_query_new(world, 
+					"[in] flecs.systems.sokol.Material,"
+					"[in] ?flecs.components.graphics.Specular,"
+					"[in] ?flecs.components.graphics.Emissive,"
+					"     ?Prefab")
+			});
+
+			sokol_init_buffers(world);
+
+			ecs_trace_1("sokol buffer support initialized");
+		}
     }
 }
 
