@@ -412,7 +412,7 @@ for (int32_t i = 0; i < it->count; i ++) {
 	SDL_GL_MakeCurrent(window, ctx);
 	glewExperimental = GL_TRUE; 
 	GLenum err = glewInit();
-	if (GLEW_OK != err){
+	//if (GLEW_OK != err){
 		
 		SDL_GL_GetDrawableSize(sdl_window, &w, &h);
 
@@ -455,7 +455,7 @@ for (int32_t i = 0; i < it->count; i ++) {
 
 			ecs_trace_1("sokol buffer support initialized");
 		}
-    }
+   // }
 }
 
 static
