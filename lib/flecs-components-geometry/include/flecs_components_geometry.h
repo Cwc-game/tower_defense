@@ -3,6 +3,7 @@
 
 #include <flecs-components-geometry/bake_config.h>
 
+
 #ifdef __cplusplus
 //extern "C" {
 #endif
