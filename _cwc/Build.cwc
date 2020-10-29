@@ -61,6 +61,9 @@
 -{vIncl}
 -{vFlag}
 >
+-#Copy {pExtLib}glew32.dll {pOut}
+-#Copy {pExtLib}SDL2.dll {pOut}
+>
 ;Generate executable
 -o {pObj} -#To {pOut}/App.*
 -L {pExtLib}
